@@ -1,0 +1,11 @@
+pre.busboy {
+	background-color: #eee;
+	margin: 1rem;
+	border: 1px solid #ddd;
+	padding: .5rem;
+}
+
+p {
+	margin: 2rem 1.5rem;
+	padding: 1rem;
+}
