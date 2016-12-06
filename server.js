@@ -35,10 +35,10 @@ var waiter = require('./server-waiter'),
 
 
 // Our quick debug tool.
-const bb = busboy.busboy.bb;
+const bb = busboy.bb;
 
 // A map of all our files at run-time. This will speed up routing checks for files.
-const seating_chart = hostess.access.mapRoute(__dirname);
+const seating_chart = hostess.mapRoute(__dirname);
 
 
 // Create & start the server.
@@ -55,7 +55,7 @@ function onRequest(request, response) {
 	     Can we merge this into the routeRequest()?
 	 */
 	// Make sure we have access, or REJECT.	
-	if (!hostess.access.accessCheck('anonymous', 'access content front')) {
+	if (!hostess.accessCheck('anonymous', 'access content front')) {
 		response.writeHead(403, {"Content-Type": "text/plain"});
 		response.write('403 | Forbidden');
 		response.end();
@@ -63,7 +63,7 @@ function onRequest(request, response) {
 	}
 
 	// Route the request.
-	if (hostess.access.routeRequest(response, request.url, seating_chart) === true) {
+	if (hostess.routeRequest(response, request.url, seating_chart) === true) {
 		return;
 	}
 
@@ -75,7 +75,7 @@ function onRequest(request, response) {
 		// Debugger to the screen.
 		bb(request, response);
 
-		var calls = waiter.serverFactory.serve(response);
+		var calls = waiter.serve(response);
 		console.log('All iteration started.');
 
 		// Once all promises complete, wrap it up.

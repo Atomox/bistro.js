@@ -104,5 +104,6 @@ var serveContent = (function serverFactory() {
 
 // Export our module.
 module.exports = {
-	serverFactory: serveContent
+	serve: serveContent.serve,
+	includeFile: serveContent.includeFile
 };

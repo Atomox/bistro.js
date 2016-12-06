@@ -71,9 +71,9 @@ var hostess = (function hostessFactory() {
 		// If the file was not in our file hash map, don't try to load it.
 		var my_path_hash = sutil.hash(path);
 
-		console.log('Searching for hash: ' + my_path_hash);
 
-		if (seating_chart.indexOf(my_path_hash)) {
+		// Don't try to serve a file not on our seating chart.
+		if (seating_chart.indexOf(my_path_hash) >= 0) {
 			// First check for a real path.
 			// Serve the file.
 			fs.readFile(path, function (err, data) {
@@ -94,8 +94,16 @@ var hostess = (function hostessFactory() {
 		// If the file wasn't real, check for a virtual route.
 		if (success !== true) {		
 
-			// How do we get a global list of allowed paths?
-			success = false;
+			/**
+			   
+			   @todo
+
+					Begin internal menu routing logic here...
+
+					i.e. /content/1 
+
+					will probably serve the first piece of content in our system.
+			 */
 		}
 
 	
@@ -219,5 +227,7 @@ var hostess = (function hostessFactory() {
 })();
 
 module.exports = {
-	access: hostess
+	accessCheck: hostess.accessCheck,
+	routeRequest: hostess.routeRequest,
+	mapRoute: hostess.mapRoute
 };

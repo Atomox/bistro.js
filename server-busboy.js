@@ -88,5 +88,5 @@ var busBoy = (function busboyFactory() {
 })();
 
 module.exports = {
-	busboy: busBoy
+	bb: busBoy.bb
 };
