@@ -1,0 +1,26 @@
+{
+  "name": "bistro.js",
+  "version": "1.0.0",
+  "description": "A small CMS server",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atomox/bistro.js.git"
+  },
+  "keywords": [
+    "CMS"
+  ],
+  "author": "Atomox",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Atomox/bistro.js/issues"
+  },
+  "homepage": "https://github.com/Atomox/bistro.js#readme",
+  "dependencies": {
+    "mysql": "^2.12.0"
+  }
+}

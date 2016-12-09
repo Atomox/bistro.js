@@ -12,13 +12,18 @@
 		 - Create a user module, server-customer.js
 
 	2. - Storrage: Let's get our data from a database!
-
+		 
+		 - Flesh out MySQL DB layer. Understand
+		   how the hell it will work in an async world. O_O
 
 	3. - Routing: Let's serve pages in a directory structure!
 
 	   - Hook_menu?
 
-	   - On startup, build a hash map of all subdirectories.
+	   - Prepare to handle internal paths (assembling content from content types).
+
+X   4. - On startup, build a hash map of all subdirectories,
+		 to make file checking faster when serving virtual paths.
 
  */
 
@@ -31,8 +36,8 @@ var http = require("http"),
 // Require our application modules.
 var waiter = require('./server-waiter'),
 	hostess = require('./server-hostess'),
-	busboy = require('./server-busboy');
-
+	busboy = require('./server-busboy'),
+	walkin = require('./server-walkin');
 
 // Our quick debug tool.
 const bb = busboy.bb;
@@ -61,6 +66,22 @@ function onRequest(request, response) {
 		response.end();
 		return;
 	}
+
+
+	// @TODO
+	//   
+	//   A little test of MySQL in Async action.
+	//   
+	var query = walkin.select('SELECT 1 + 1 AS two');
+
+	query.then(function acceptDbResult(rows, fields){
+		console.log('We have results!');
+		console.log(' - - - - - - - - -');
+		console.log(fields);
+		console.log(' - - - - - - - - -');
+		console.log(rows);
+	});
+
 
 	// Route the request.
 	if (hostess.routeRequest(response, request.url, seating_chart) === true) {
