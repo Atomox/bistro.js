@@ -1,15 +1,17 @@
 const mysql = require('mysql');
 
+/**
+   @TODO
+     Let's find a *safer* way to provide this to our module.
+ */
+payroll = require('./server-payroll');
 
-var db = (function dbConn(){
+
+
+var db = (function dbConn() {
 
 	function getConnection() {
-		var freezer = mysql.createConnection({
-			host: 'localhost',
-			user: 'bistro',
-			password: 'bistro1',
-			database: 'bistro'
-		});
+		var freezer = mysql.createConnection(payroll.db_credentials);
 
 		return freezer;
 	}
@@ -21,7 +23,14 @@ var db = (function dbConn(){
 	 * @return {connection}
 	 *   A DB object we can act upon.
 	 */
-	function connect(){
+	function connect() {
+
+		/**
+		   @todo When we care about performance, look into Connection Pools. See:
+
+		   @see https://codeforgeek.com/2015/01/nodejs-mysql-tutorial/
+		 */
+
 		console.log('Getting connection.');
 		var freezer = getConnection();
 		freezer.connect();
@@ -49,7 +58,8 @@ var db = (function dbConn(){
 					// freezer.end();
 					reject(err); 
 				}
-				console.log('We made it!  |  ' + fields);
+				console.log('We made it!  |  ');
+				console.log(fields);
 				// freezer.end();
 				resolve(rows, fields);
 			});

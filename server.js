@@ -16,6 +16,18 @@
 		 - Flesh out MySQL DB layer. Understand
 		   how the hell it will work in an async world. O_O
 
+			- Propose Map() functionality to handle results of a query.
+			  In this model, we Map a set of fields to an object structure, 
+			  or at least, a flat row structure we can use without iterating
+			  ourselves after $result is returned.
+
+			- We'll at least need a data mapper when we get to defining
+			  content types, and custom fields.
+
+			@see http://docs.sequelizejs.com/
+
+
+
 	3. - Routing: Let's serve pages in a directory structure!
 
 	   - Hook_menu?
@@ -37,14 +49,34 @@ var http = require("http"),
 var waiter = require('./server-waiter'),
 	hostess = require('./server-hostess'),
 	busboy = require('./server-busboy'),
-	walkin = require('./server-walkin');
+	walkin = require('./server-walkin'),
+	payroll = require('./server-payroll');
 
 // Our quick debug tool.
 const bb = busboy.bb;
 
+/**
+   @todo
+     Once we impliment uploads, allow a supplimental table
+     which can be updated with new hashes as they are created.
+ */
 // A map of all our files at run-time. This will speed up routing checks for files.
 const seating_chart = hostess.mapRoute(__dirname);
 
+/**
+ 
+
+
+     @TODO
+
+
+     @TODO
+
+
+
+
+ */
+const assigned_seating_chart = hostess.mapVirtualRoute();
 
 // Create & start the server.
 http.createServer(onRequest).listen(8888);
@@ -55,22 +87,12 @@ console.log('Server has started.');
 function onRequest(request, response) {
 	console.log('Request Received: ' + request.url);
 
-	/**
-	   @todo
-	     Can we merge this into the routeRequest()?
-	 */
-	// Make sure we have access, or REJECT.	
-	if (!hostess.accessCheck('anonymous', 'access content front')) {
-		response.writeHead(403, {"Content-Type": "text/plain"});
-		response.write('403 | Forbidden');
-		response.end();
-		return;
-	}
-
 
 	// @TODO
 	//   
 	//   A little test of MySQL in Async action.
+	//   
+	//   This won't live here, ultimately.
 	//   
 	var query = walkin.select('SELECT 1 + 1 AS two');
 

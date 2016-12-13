@@ -2,7 +2,13 @@
 fs = require('fs');
 
 // Custom
-sutil = require('./includes/server-utils');
+sutil = require('./includes/server-utils'),
+/**
+   @TODO
+     Let's find a *safer* way to provide this to our module.
+ */
+payroll = require('./server-payroll');
+
 
 
 var hostess = (function hostessFactory() {
@@ -71,10 +77,27 @@ var hostess = (function hostessFactory() {
 		// If the file was not in our file hash map, don't try to load it.
 		var my_path_hash = sutil.hash(path);
 
+		/**
+		   @todo
+
+		     Ultimately, this needs to work in parts:
+
+		     1. Find the path.
+		     2. Authenticate the request (access check)
+		     3. Prepare request routing.
+		     4. Return ultimate success or failure (or forbidden)
+
+		 */
 
 		// Don't try to serve a file not on our seating chart.
 		if (seating_chart.indexOf(my_path_hash) >= 0) {
 			// First check for a real path.
+			
+			/**
+			   @todo
+			     Access Check real files?
+			 */
+
 			// Serve the file.
 			fs.readFile(path, function (err, data) {
 		        if (err) { console.log(err); return; }
@@ -94,6 +117,8 @@ var hostess = (function hostessFactory() {
 		// If the file wasn't real, check for a virtual route.
 		if (success !== true) {		
 
+			// Get a list of module paths.
+
 			/**
 			   
 			   @todo
@@ -105,6 +130,16 @@ var hostess = (function hostessFactory() {
 					will probably serve the first piece of content in our system.
 			 */
 		}
+
+
+		// Make sure we have access, or REJECT.	
+		if (!hostess.accessCheck('anonymous', 'access content front')) {
+			response.writeHead(403, {"Content-Type": "text/plain"});
+			response.write('403 | Forbidden');
+			response.end();
+			return;
+		}
+
 
 	
 		if (success === true) {
@@ -219,15 +254,61 @@ var hostess = (function hostessFactory() {
         return results;
 	}
 
+
+	/**
+	 * Assemble a assigned seating chart, of all virtual routes assigned internally.
+	 
+	   @TODO
+
+	 */
+	function virtualSeatingChart() {
+
+		/**
+		   @TODO
+		     Capture all results.
+		 */
+
+		payroll.module_roster.forEach(function(module_name) {
+			var my_module = sutil.module_require(module_name);
+
+			if (my_module && my_module.paths) {
+				/**
+
+				   @TODO
+				     look through and map all module.paths
+
+
+					HASH The paths.
+
+					  How do we abstract the paths in a way where:
+					    content/* maps to:
+					    content/1 
+					    content/delicious_walrus
+					    content/hi_dad_soup?
+
+					    Do we have to store paths more like a tree,
+					    or can we still do a hash table?
+				 */
+				console.log('Paths for ' + module_name);
+				console.log(my_module.paths);
+			}
+			else {
+				console.log(module_name + '\'s not here, man.');
+			}
+		});
+	}
+
 	return {
 		accessCheck: accessCheck,
 		routeRequest: seatCustomer,
-		mapRoute: seatingChart
+		mapRoute: seatingChart,
+		mapVirtualRoute: virtualSeatingChart
 	};
 })();
 
 module.exports = {
 	accessCheck: hostess.accessCheck,
 	routeRequest: hostess.routeRequest,
-	mapRoute: hostess.mapRoute
+	mapRoute: hostess.mapRoute,
+	mapVirtualRoute: hostess.mapVirtualRoute
 };
