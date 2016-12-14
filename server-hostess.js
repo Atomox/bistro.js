@@ -280,22 +280,62 @@ var hostess = (function hostessFactory() {
 
 					HASH The paths.
 
-					  How do we abstract the paths in a way where:
-					    content/* maps to:
-					    content/1 
-					    content/delicious_walrus
-					    content/hi_dad_soup?
-
 					    Do we have to store paths more like a tree,
 					    or can we still do a hash table?
 				 */
-				console.log('Paths for ' + module_name);
-				console.log(my_module.paths);
+				var myPathMap = parseVirtualPaths(my_module.paths);
 			}
 			else {
 				console.log(module_name + '\'s not here, man.');
 			}
 		});
+	}
+
+
+	/**
+	 * Given an array of paths, prepare them in a predictable way, which we may use to convert for using in a map.
+	 * 
+	 * @param {object} paths
+	 *   A list of paths as defined in a module.
+	 */
+	function parseVirtualPaths(paths) {
+		// Every path should end with /*, the wild card.
+		console.log(paths);
+
+		if (paths instanceof Object) {
+			paths.forEach(function(p) {
+				if (p.path) {
+					normalize = normalizePath(p.path);
+					console.log(p.path);
+				}
+			}); 
+		}
+	}
+
+
+	function normalizePath(path) {
+		if (path instanceof String) {
+			/**
+					  How do we abstract the paths in a way where:
+			 */
+			
+			// content/*
+			    // content/1 
+			    // content/delicious_walrus
+			    // content/hi_dad_soup?
+			    
+			// taxonomy/*/*
+			    // 1/*/3/4/5
+			
+
+			// Rules:
+			//    arg(0) must always be a string
+			//    
+			
+			// Example: path/two/three/*/five
+			// path -> two -> three ->
+
+		}
 	}
 
 	return {
