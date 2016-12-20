@@ -171,20 +171,81 @@ var internalPaths = (function pathFactory() {
     }
 
 
-    function eval_path () {
+    /**
+     * Try to match our path to an internal path.
+     * 
+     * @param {string} path
+     *   A URL string we should parse.
+     *   
+     * @return {object | boolean}
+     *   An internal path object, if one could be mapped. Otherwise, FALSE.
+     */
+    function get_path (path) {
+        console.log(' -> Looking up Path: ' + path);
+        
+        try {
 
+            // Replace the leading and trailing slashes in a URL.
+            if (path.charAt(0) == '/') {
+                path = path.replace("/", "");
+            }
+            if (path.charAt(path.length-1) == '/') {
+                path = path.slice(0,-1);
+            }
+
+            var my_args = path.split("/");
+
+            // Always start with the root parent,
+            // but we'll only ever look at Root's children, or below.
+            var my_parent = myRoot;
+
+            for (var i = 0; i < my_args.length; i++) {
+                var piece = my_args[i];
+                var last_arg = (i == my_args.length - 1) ? true : false;
+
+                // Look for our next arg in our parent's children.
+                my_node = myTree.getChild(my_parent, piece);
+                
+                // If this was a miss, but we have a more general term, try that.
+                if (my_node === false) {
+                    my_node = myTree.getChild(my_parent, '*');
+                }
+
+
+                if (my_node === false) {
+                    // Cannot find a match.
+                    console.log('Cannot match ' + piece);
+                    break;
+                }
+                else if (last_arg === true && my_node.data != null) {
+                    return my_node.data;
+                }
+                else if(my_node) {
+                    console.log(piece + ' matches...');
+                }
+
+                // Our new node will soon be a parent of the next node.
+                my_parent = my_node;
+            }
+        }
+        catch (e) {
+            throw new Error('An error occured while evaluating an existing path. ' + e);
+        }   
+
+        return false;     
     }
 
     return {
         tree: myTree,
-        add_path: add_path
+        add_path: add_path,
+        get_path: get_path
     };
 })();
 
 
 module.exports = {
     addInternalPath: internalPaths.add_path,
-    getPath: internalPaths.eval_path
+    getPath: internalPaths.get_path
 };
 
 
@@ -194,10 +255,6 @@ module.exports = {
 
 
      Example import:
-
-     
-  
-
  */
 var myPaths = [
     'albums/my_first_album/photos/my_first_photo',

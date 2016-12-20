@@ -24,7 +24,46 @@ var myFirstModule = (function (){
 			 */
 			callback: 'hello', 
 			type: 'normal'
+		},
+		{
+			path: 'albums/*',
+			id: 1,
+			title: 'Album',
+			access: 'access content',
+			callback: 'Album'
+		},
+		{
+			path: 'albums/*/set/*',
+			id: 1,
+			title: 'Album Set',
+			access: 'access content',
+			callback: 'Album Set'
+		},
+		{
+			path: 'albums/*/*',
+			id: [2,3],
+			title: 'Album/Photo',
+			callback: 'album photo'
+		},
+		{
+			path: 'photos/*',
+			id: 1,
+			title: 'Individual Photo',
+			callback: 'Photo' 
 		}
+	];
+
+
+	/**
+	 * Examples:
+	 */
+	var myPaths = [
+	    'albums/my_first_album/photos/my_first_photo',
+	    'albums/my_first_album/photos/my_second_photo',
+	    'albums/my_third/photos/my_first_photo',
+	    'sets/123',
+	    'sets/123/234',
+	    'sets/123/my_first_photo'
 	];
 
 

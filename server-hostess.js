@@ -7,7 +7,8 @@ sutil = require('./includes/server-utils'),
    @TODO
      Let's find a *safer* way to provide this to our module.
  */
-payroll = require('./server-payroll');
+payroll = require('./server-payroll'),
+paths = require('./includes/server-paths.js');
 
 
 
@@ -113,22 +114,39 @@ var hostess = (function hostessFactory() {
 				success = true;
 			});
 		}
+
+		var default_menu_item = {
+			access: 'access content front',
+		};
 		
 		// If the file wasn't real, check for a virtual route.
 		if (success !== true) {		
 
-			// Get a list of module paths.
+			console.log('Checking for a cirtual path: ' + path);
 
-			/**
-			   
-			   @todo
+			// Look for a map to a virtual path callback.
+			// If found, we'll get a menu item result.
+			var virtual_path = resolveVirtualPath(path);
 
-					Begin internal menu routing logic here...
+			if (virtual_path !== false) {
 
-					i.e. /content/1 
+				/**
+				   
 
-					will probably serve the first piece of content in our system.
-			 */
+				   @TODO
+
+
+				 */
+				console.log('Seating a virtual path: ');
+				console.log(virtual_path);
+
+				if (virtual_path.access) {
+					default_menu_item.path = virtual_path.access;
+				}
+
+				// Indicate success.
+				success = true;
+			}
 		}
 
 
@@ -139,8 +157,6 @@ var hostess = (function hostessFactory() {
 			response.end();
 			return;
 		}
-
-
 	
 		if (success === true) {
 			response.end();
@@ -257,33 +273,14 @@ var hostess = (function hostessFactory() {
 
 	/**
 	 * Assemble a assigned seating chart, of all virtual routes assigned internally.
-	 
-	   @TODO
-
 	 */
 	function virtualSeatingChart() {
-
-		/**
-		   @TODO
-		     Capture all results.
-		 */
-
 		payroll.module_roster.forEach(function(module_name) {
 			var my_module = sutil.module_require(module_name);
 
 			if (my_module && my_module.paths) {
-				/**
-
-				   @TODO
-				     look through and map all module.paths
-
-
-					HASH The paths.
-
-					    Do we have to store paths more like a tree,
-					    or can we still do a hash table?
-				 */
-				var myPathMap = parseVirtualPaths(my_module.paths);
+				// Add all paths in this module to our paths module.
+				parseVirtualPaths(my_module.paths);
 			}
 			else {
 				console.log(module_name + '\'s not here, man.');
@@ -298,44 +295,35 @@ var hostess = (function hostessFactory() {
 	 * @param {object} paths
 	 *   A list of paths as defined in a module.
 	 */
-	function parseVirtualPaths(paths) {
-		// Every path should end with /*, the wild card.
-		console.log(paths);
-
-		if (paths instanceof Object) {
-			paths.forEach(function(p) {
+	function parseVirtualPaths(path_list) {
+		if (path_list instanceof Object) {
+			path_list.forEach(function(p) {
 				if (p.path) {
-					normalize = normalizePath(p.path);
-					console.log(p.path);
+					paths.addInternalPath(p.path, p);
 				}
 			}); 
 		}
 	}
 
 
-	function normalizePath(path) {
-		if (path instanceof String) {
-			/**
-					  How do we abstract the paths in a way where:
-			 */
-			
-			// content/*
-			    // content/1 
-			    // content/delicious_walrus
-			    // content/hi_dad_soup?
-			    
-			// taxonomy/*/*
-			    // 1/*/3/4/5
-			
+	/**
+	 
+       @TODO
 
-			// Rules:
-			//    arg(0) must always be a string
-			//    
-			
-			// Example: path/two/three/*/five
-			// path -> two -> three ->
+         Given a URL, to to match it against our virtual seating chart.
 
+
+
+
+	 * @param  {[type]} url [description]
+	 * @return {[type]}     [description]
+	 */
+	function resolveVirtualPath(url) {
+		if (!paths) {
+			throw new Error('Paths module not enabled.');
 		}
+
+		return paths.getPath(url);
 	}
 
 	return {

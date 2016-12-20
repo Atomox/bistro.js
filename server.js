@@ -87,7 +87,7 @@ console.log('Server has started.');
 function onRequest(request, response) {
 	console.log('Request Received: ' + request.url);
 
-
+/**
 	// @TODO
 	//   
 	//   A little test of MySQL in Async action.
@@ -104,6 +104,7 @@ function onRequest(request, response) {
 		console.log(rows);
 	});
 
+*/
 
 	// Route the request.
 	if (hostess.routeRequest(response, request.url, seating_chart) === true) {
