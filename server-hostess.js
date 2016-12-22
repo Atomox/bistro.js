@@ -92,14 +92,9 @@ var hostess = (function hostessFactory() {
 
 		// Don't try to serve a file not on our seating chart.
 		if (seating_chart.indexOf(my_path_hash) >= 0) {
-			// First check for a real path.
 			
-			/**
-			   @todo
-			     Access Check real files?
-			 */
-
-			// Serve the file.
+			// First check for a real path.
+			// Serve the file, if found.
 			fs.readFile(path, function (err, data) {
 		        if (err) { console.log(err); return; }
 				console.log('Serving ' + extension + '.');
@@ -115,14 +110,15 @@ var hostess = (function hostessFactory() {
 			});
 		}
 
-		var default_menu_item = {
-			access: 'access content front',
+		// Set a default access check
+		var menu_item = {
+			access: 'access content',
 		};
 		
 		// If the file wasn't real, check for a virtual route.
 		if (success !== true) {		
 
-			console.log('Checking for a cirtual path: ' + path);
+			console.log('Checking for a virtual path: ' + path);
 
 			// Look for a map to a virtual path callback.
 			// If found, we'll get a menu item result.
@@ -132,17 +128,16 @@ var hostess = (function hostessFactory() {
 
 				/**
 				   
-
 				   @TODO
-
 
 				 */
 				console.log('Seating a virtual path: ');
 				console.log(virtual_path);
 
-				if (virtual_path.access) {
-					default_menu_item.path = virtual_path.access;
-				}
+				// If we have found a virtual path match,
+				// set it as our menu item.
+				menu_item = virtual_path.match;
+				menu_item_depth = virtual_path.length;
 
 				// Indicate success.
 				success = true;
@@ -151,7 +146,8 @@ var hostess = (function hostessFactory() {
 
 
 		// Make sure we have access, or REJECT.	
-		if (!hostess.accessCheck('anonymous', 'access content front')) {
+		if (menu_item.access 
+			&& !hostess.accessCheck('anonymous', menu_item.access)) {
 			response.writeHead(403, {"Content-Type": "text/plain"});
 			response.write('403 | Forbidden');
 			response.end();

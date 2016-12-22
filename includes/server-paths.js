@@ -66,8 +66,8 @@ var tree = (function treeFactory() {
      * 
      * @param {node} parent
      *   A parent node, which we should check for a child with {id}.
-     * @param {string} id
-     *   The node ID of a child, we should look for. ID is unique
+     * @param {string|array} id
+     *   The node ID(s) of one or more children, we should look for. ID is unique
      *   per parent's immediate children.
      * 
      * @return {node | boolean}
@@ -78,21 +78,37 @@ var tree = (function treeFactory() {
         if (parent && parent.children) {
             var mySibling = false;
 
+            // Force our id into an array.
+            if (!Array.isArray(id) && typeof id === 'string') {
+                id = [id];
+            }
+
+            // Check all children for matches to our ids.
             for (var i = 0; i < parent.children.length; i++) {
                 var c = parent.children[i];
-                if (c.id == id) {
-                    mySibling = c;
-                    break;
+
+                if (typeof id === 'object' && Array.isArray(id)) {
+                    for (j = 0; j < id.length; j++) {
+                        if (c.id == id[j]) {
+                            if (mySibling === false) {
+                                mySibling = [c];
+                            }
+                            else {
+                                mySibling.push(c);
+                            }
+                        }
+                    }
                 }
             };
 
-            if (mySibling && mySibling.id) {
+            if (mySibling !== false) {
                 return mySibling;
             }
         }
 
         return false;
     }
+
 
     return {
         Tree: Tree
@@ -137,6 +153,10 @@ var internalPaths = (function pathFactory() {
                 if (my_node === false) {
                     console.log('  | Skipping path arg: ' + piece + ', parent = ' + my_parent.id);
                     my_node = myTree.getChild(my_parent, piece);
+
+                    if (Array.isArray(my_node)) {
+                        my_node = my_node[0];
+                    }
                     
                     // Existing node, but could not retrieve it.
                     if (my_node === false) {
@@ -195,37 +215,10 @@ var internalPaths = (function pathFactory() {
 
             var my_args = path.split("/");
 
-            // Always start with the root parent,
-            // but we'll only ever look at Root's children, or below.
-            var my_parent = myRoot;
-
-            for (var i = 0; i < my_args.length; i++) {
-                var piece = my_args[i];
-                var last_arg = (i == my_args.length - 1) ? true : false;
-
-                // Look for our next arg in our parent's children.
-                my_node = myTree.getChild(my_parent, piece);
-                
-                // If this was a miss, but we have a more general term, try that.
-                if (my_node === false) {
-                    my_node = myTree.getChild(my_parent, '*');
-                }
-
-
-                if (my_node === false) {
-                    // Cannot find a match.
-                    console.log('Cannot match ' + piece);
-                    break;
-                }
-                else if (last_arg === true && my_node.data != null) {
-                    return my_node.data;
-                }
-                else if(my_node) {
-                    console.log(piece + ' matches...');
-                }
-
-                // Our new node will soon be a parent of the next node.
-                my_parent = my_node;
+            // Look for the longest complete match, and return it's node and depth.
+            var matches = match_callback_paths(myRoot, my_args);
+            if (matches && matches.match !== null) {
+                return matches;
             }
         }
         catch (e) {
@@ -233,6 +226,83 @@ var internalPaths = (function pathFactory() {
         }   
 
         return false;     
+    }
+
+
+    function match_callback_paths(parent, path_args, depth) {
+
+        if (!depth) {
+            depth = 0;
+        }
+
+        var piece = path_args[depth];
+        var last_arg = (depth == path_args.length - 1) ? true : false;
+ 
+        // Add all non-specific path arg types here.
+        var pieces = [piece, '*'];
+
+        var full_match = null;
+        var full_match_length = -1;
+
+        // Look for our next arg in our current parent's children.
+        var my_nodes = myTree.getChild(parent, pieces);
+
+        /**
+           
+           @TODO
+
+             ORDER the results by precidence.
+
+         */
+
+
+        /**
+           
+           @TODO
+
+            THIS is where we get Asynchronous!
+    
+         */
+        
+        var local_depth = depth;
+
+        // Loop through, checking any matches. We'll give precidence to
+        // literals, but check for generals (wildcards) that match to
+        // the end of the path.
+        if (my_nodes !== false && Array.isArray(my_nodes)) {
+            for (j = 0; j < my_nodes.length; j++) {
+
+                // If there is a callback on this level,
+                // and we don't have a longer one yet, match.
+                if (my_nodes[j].data != null 
+                    && my_nodes[j].data.callback !== null 
+                    && depth > full_match_length) {
+                    // 1. Node matches, and an internal path endpoint.
+                    full_match = my_nodes[j];
+                    full_match_length = depth;
+                }
+                else if (my_nodes[j].data != null && my_nodes[j].data.callback !== null) {
+                    console.log('   > ' + depth + ' -> ' + ' ... match ignored because of depth (' + depth + ' < ' + full_match_length + '). (A) -- ' + my_nodes[j].id);
+                }
+
+                // If we're not at the last arg, recurse.
+                if (last_arg === false) {
+                    var depth_match = match_callback_paths(my_nodes[j], path_args, (local_depth+1));
+                    if (depth_match.match !== null && depth_match.length > full_match_length) {
+                        full_match = depth_match.match;
+                        full_match_length = depth_match.length;
+                    }
+                    else if (depth_match.match !== null) {
+                        console.log('   > ' + depth + ' -> ' + ' ... match ignored because of depth. (B) -- ' + depth_match.match.id);
+                    }
+                }
+            }
+        }
+
+        return {
+            match: full_match,
+            length: full_match_length
+        }
     }
 
     return {
@@ -256,6 +326,7 @@ module.exports = {
 
      Example import:
  */
+/**
 var myPaths = [
     'albums/my_first_album/photos/my_first_photo',
     'albums/my_first_album/photos/my_second_photo',
@@ -273,3 +344,4 @@ myPaths.forEach(function(p) {
 
     console.log('');
 });
+*/
