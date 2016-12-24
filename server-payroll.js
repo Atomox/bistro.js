@@ -19,7 +19,8 @@ var myPayroll = ( function settingsFactory() {
 		  This is just an up-and-running start.
 	 */
 	var staff_roster = [
-		'my_first_module'
+		'my_first_module',
+		'lorem_ipsum_timeout_example'
 	];
 
 	var locker_room_path = 'staff/modules';

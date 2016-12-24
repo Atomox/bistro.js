@@ -89,34 +89,37 @@ var hostess = (function hostessFactory() {
 		     4. Return ultimate success or failure (or forbidden)
 
 		 */
-
-		// Don't try to serve a file not on our seating chart.
-		if (seating_chart.indexOf(my_path_hash) >= 0) {
-			
-			// First check for a real path.
-			// Serve the file, if found.
-			fs.readFile(path, function (err, data) {
-		        if (err) { console.log(err); return; }
-				console.log('Serving ' + extension + '.');
-				
-				// Write our header before we present the file.
-				writeHeader(response, extension);
-
-				// Write the data.
-				response.write(data);
-
-				// Indicate success.
-				success = true;
-			});
-		}
-
 		// Set a default access check
 		var menu_item = {
 			access: 'access content',
 		};
 		
+		var calls = [];
+
+		// Don't try to serve a file not on our seating chart.
+		if (seating_chart.indexOf(my_path_hash) >= 0) {		
+			calls.push(new Promise(
+				function(resolve, reject) {
+
+					// First check for a real path.
+					// Serve the file, if found.
+					fs.readFile(path, function (err, data) {
+				        if (err) { console.log(err); return; }
+						console.log('Serving ' + extension + '.');
+						
+						// Write our header before we present the file.
+						writeHeader(response, extension);
+
+						// Write the data.
+						response.write(data);
+
+						// Indicate success.
+						resolve(true);
+					});
+				}));
+		}
 		// If the file wasn't real, check for a virtual route.
-		if (success !== true) {		
+		else {		
 
 			console.log('Checking for a virtual path: ' + path);
 
@@ -138,27 +141,97 @@ var hostess = (function hostessFactory() {
 				// set it as our menu item.
 				menu_item = virtual_path.match;
 				menu_item_depth = virtual_path.length;
+				menu_path_info = menu_item.data;
+				var args = [];
 
-				// Indicate success.
-				success = true;
+				console.log(' - - - - - - - - - ');
+				console.log(menu_path_info);
+				console.log(' - - - - - - - - - ');
+				
+
+
+				// If menu item has a callback, check for args. Then call the callback, passing args if available.
+				// check for placeholder args, like GLOBAL_RESPONSE, which should but supplimented with the response object.
+				if (menu_path_info.callback) {
+
+					console.log('Seated path Callback found. Executing...');
+
+					if (menu_path_info.arguments) {
+						args = prepare_args(menu_path_info.arguments, {
+							response: response,
+							path: path
+						});
+					}
+
+							// Make sure we have access, or REJECT.	
+					if (menu_path_info.access 
+						&& !hostess.accessCheck('anonymous', menu_path_info.access)) {
+						response.writeHead(403, {"Content-Type": "text/plain"});
+						response.write('403 | Forbidden');
+						response.end();
+					}
+					else {
+//						console.log('Passing in args:');
+//						console.log(args);
+
+
+						// Execute the callback with our processed args.
+						var internal_response = menu_path_info.callback.apply (null, args);
+
+						/**
+						   @TODO
+
+						     What is the flow here?
+
+						     When the Lorem Ipsum Timeout Module fires off all it's promises, it return them.
+						     As they resolve, the server.js Promise.All(); Fires, causing response to close
+						     before we've finished writing.
+						 */
+						// Merge or push any promises to the promise array.
+						if (Array.isArray(internal_response)) {
+							// Push our promise(s) onto the return array.
+							calls.concat(internal_response);
+						}
+						else {
+							calls.push(internal_response);
+						}
+					}
+				}
 			}
 		}
 
+		return calls;
+	}
 
-		// Make sure we have access, or REJECT.	
-		if (menu_item.access 
-			&& !hostess.accessCheck('anonymous', menu_item.access)) {
-			response.writeHead(403, {"Content-Type": "text/plain"});
-			response.write('403 | Forbidden');
-			response.end();
-			return;
-		}
-	
-		if (success === true) {
-			response.end();
+
+	/**
+	 * Given an args array from a path definition, finalize the args we should pass to the path callback.
+	 * 
+	 * @param  {array} args
+	 *   The args requested to pass to our path callback.
+	 * @param  {object} global_available_vars
+	 *   The list of all available "global" variables we can make available as args to our path callback.
+	 * 
+	 * @return {array}
+	 *   A list of args we should pass to our path callback, in the order they should be passed.
+	 */
+	function prepare_args(args, global_available_vars) {
+
+		var final_args = [];
+
+		if (args && Array.isArray(args)) {
+			for (var i = 0; i < args.length; i++) {
+				var myArg = args[i];
+
+				if (myArg == 'GLOBAL_RESPONSE') {
+					myArg = global_available_vars.response;
+				}
+
+				final_args.push(myArg);
+			}
 		}
 
-		return success;
+		return final_args;
 	}
 
 

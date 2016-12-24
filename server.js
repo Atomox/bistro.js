@@ -63,19 +63,8 @@ const bb = busboy.bb;
 // A map of all our files at run-time. This will speed up routing checks for files.
 const seating_chart = hostess.mapRoute(__dirname);
 
-/**
- 
-
-
-     @TODO
-
-
-     @TODO
-
-
-
-
- */
+// A map of all internal paths, mapped to their callbacks. 
+// @see Payroll and the staff directory.
 const assigned_seating_chart = hostess.mapVirtualRoute();
 
 // Create & start the server.
@@ -106,33 +95,17 @@ function onRequest(request, response) {
 
 */
 
-	// Route the request.
-	if (hostess.routeRequest(response, request.url, seating_chart) === true) {
-		return;
-	}
+	// Route our request.
+	var calls = hostess.routeRequest(response, request.url, seating_chart)
 
+	// Once all promises complete, wrap it up.
+	Promise.all(calls)
+		.then(function thenResponse() {
+			console.log('Ending response.');
+			response.end();
+		})
+		.catch(function errPromiseAll(){ 
+			response.write('Error completing all promises');
+			response.end(); });
 
-	if (request.url == '/') {
-		// Print a valid header.
-		response.writeHead(200, {"Content-Type": "text/html"});
-
-		// Debugger to the screen.
-		bb(request, response);
-
-		var calls = waiter.serve(response);
-		console.log('All iteration started.');
-
-		// Once all promises complete, wrap it up.
-		Promise.all(calls)
-			.then(function thenResponse() {
-				console.log('Ending response.');
-				response.end()
-			})
-			.catch(function errPromiseAll(){ 
-				response.write('Error completing all promises');
-				response.end(); });
-	}
-	else {
-		response.end();
-	}
 }
