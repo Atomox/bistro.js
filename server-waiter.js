@@ -5,7 +5,7 @@
 var serveContent = (function serverFactory() {
 
 	// public.
-	function serveContent(response) {
+	function serveContent(response, content) {
 		var i = 0;
 
 		// All promises we're making, to be returned.
@@ -22,21 +22,23 @@ var serveContent = (function serverFactory() {
 					// Pull our ID into the local scope, so it doesn't get lost.
 					var self_id = i;
 
-					// Get our content.
-					var myContent = generateContent('p', self_id, ['content-' + i, 'content']);
+					if (content[i]) {
+						// Get our content.
+						var myContent = generateContent('p', content[i], ['content-' + i, 'content']);
 
-					console.log('Fetching content for promise ' + self_id);
+						console.log('Fetching content for promise ' + self_id);
 
-					// Write it to the response after a small wait time,
-					// and resolve our promise.
-					setTimeout(function myCallback(err) {
-						response.write(myContent);
-						resolve(i);
-						}, wait);
+						// Write it to the response after a small wait time,
+						// and resolve our promise.
+						setTimeout(function myCallback(err) {
+							response.write(myContent);
+							resolve(i);
+							}, wait);						
+					}
 				}
 			);
 			i++;
-		} while(i < 4);
+		} while(i < content.length);
 
 		return calls;
 	}
@@ -48,13 +50,10 @@ var serveContent = (function serverFactory() {
 	}
 
 	// private.
-	function generateContent(type, index, classes) {
+	function generateContent(type, content, classes) {
 		
-		var data = content_store();
-		var size = content_store().length;
-		
-		if (data[index]) {
-			return wrapContent(data[index], 'p', classes);
+		if (content) {
+			return wrapContent(content, 'p', classes);
 		}
 
 		return false;
@@ -83,17 +82,6 @@ var serveContent = (function serverFactory() {
 		return result;
 	}
 
-	// private.
-	var content_store = function content_store() {
-		var lorem = [
-			'Fixie wayfarers lomo, normcore wolf chicharrones kitsch stumptown intelligentsia occupy. Tbh prism kogi lyft, schlitz pop-up man bun activated charcoal offal art party. Irony retro ennui, everyday carry hexagon umami mumblecore. Stumptown drinking vinegar blog, salvia yr pop-up man bun ramps ethical ugh thundercats PBR&B green juice organic roof party. Skateboard gochujang next level poutine put a bird on it, shabby chic bitters cardigan. Portland cold-pressed mixtape, sartorial cardigan everyday carry selfies. Pour-over fixie pug letterpress church-key ethical.',
-			'Chambray vexillologist hell of leggings, mumblecore food truck cardigan YOLO listicle. Deep v cardigan put a bird on it gentrify, copper mug mustache iceland yuccie quinoa retro butcher leggings meh master cleanse. Pour-over direct trade hell of brooklyn actually, cornhole blog. Aesthetic selvage portland, whatever raw denim tilde intelligentsia williamsburg. Banjo beard activated charcoal venmo, enamel pin single-origin coffee synth jean shorts bushwick. Art party schlitz listicle live-edge, ethical bespoke stumptown gastropub DIY twee hoodie vice franzen occupy VHS. Farm-to-table salvia succulents vaporware thundercats.',
-			'Roof party enamel pin kitsch echo park gentrify shabby chic. Hot chicken cronut single-origin coffee, 8-bit you probably haven\'t heard of them hell of gentrify four dollar toast pabst migas. Affogato tumeric mumblecore marfa migas, lyft authentic skateboard. Prism shabby chic iPhone XOXO, PBR&B pickled banh mi butcher ugh subway tile man bun vinyl bespoke kombucha DIY. Prism XOXO disrupt bespoke, forage trust fund deep v yuccie polaroid fixie. Affogato selfies cornhole tilde lumbersexual locavore shoreditch, roof party drinking vinegar occupy brunch squid. Fixie lyft flexitarian, flannel glossier chia post-ironic ennui offal.',
-			'Stumptown ugh kale chips slow-carb, pour-over direct trade listicle try-hard church-key irony banjo brunch you probably haven\'t heard of them semiotics selvage. Salvia jianbing kale chips semiotics godard beard. Venmo post-ironic meh blue bottle migas helvetica art party banh mi. Salvia pug fam, YOLO jean shorts scenester squid trust fund gastropub tumblr 3 wolf moon iPhone woke hot chicken tote bag. Intelligentsia disrupt shabby chic plaid lyft cold-pressed cred, leggings truffaut. Affogato shabby chic banjo kitsch. Chia you probably haven\'t heard of them locavore mustache.'
-		];
-
-		return lorem;
-	}
 
 	return {
 		serve: serveContent,

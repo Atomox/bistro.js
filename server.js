@@ -28,11 +28,11 @@
 
 
 
-	3. - Routing: Let's serve pages in a directory structure!
+X   3. - Routing: Let's serve pages in a directory structure!
 
-	   - Hook_menu?
+X      - Hook_menu?
 
-	   - Prepare to handle internal paths (assembling content from content types).
+X	   - Prepare to handle internal paths (assembling content from content types).
 
 X   4. - On startup, build a hash map of all subdirectories,
 		 to make file checking faster when serving virtual paths.
@@ -75,25 +75,6 @@ console.log('Server has started.');
 // Left off on page 15 on 12/12/2015, just before midnight.
 function onRequest(request, response) {
 	console.log('Request Received: ' + request.url);
-
-/**
-	// @TODO
-	//   
-	//   A little test of MySQL in Async action.
-	//   
-	//   This won't live here, ultimately.
-	//   
-	var query = walkin.select('SELECT 1 + 1 AS two');
-
-	query.then(function acceptDbResult(rows, fields){
-		console.log('We have results!');
-		console.log(' - - - - - - - - -');
-		console.log(fields);
-		console.log(' - - - - - - - - -');
-		console.log(rows);
-	});
-
-*/
 
 	// Route our request.
 	var calls = hostess.routeRequest(response, request.url, seating_chart)
