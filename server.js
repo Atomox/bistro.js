@@ -11,9 +11,9 @@
 
 		 - Create a user module, server-customer.js
 
-	2. - Storrage: Let's get our data from a database!
+X	2. - Storrage: Let's get our data from a database!
 		 
-		 - Flesh out MySQL DB layer. Understand
+X		 - Flesh out MySQL DB layer. Understand
 		   how the hell it will work in an async world. O_O
 
 			- Propose Map() functionality to handle results of a query.
@@ -34,8 +34,14 @@ X      - Hook_menu?
 
 X	   - Prepare to handle internal paths (assembling content from content types).
 
+	   - Find a way to declare and pass globals to modules.
+
 X   4. - On startup, build a hash map of all subdirectories,
 		 to make file checking faster when serving virtual paths.
+
+	5. - 
+
+	6. - Build a templating layer.
 
  */
 

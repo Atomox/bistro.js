@@ -74,10 +74,6 @@ var hostess = (function hostessFactory() {
 		var extension = reservationType(path);
 		var success = false;
 
-		// Hash our path, and check the seating chart.
-		// If the file was not in our file hash map, don't try to load it.
-		var my_path_hash = sutil.hash(path);
-
 		/**
 		   @todo
 
@@ -96,44 +92,29 @@ var hostess = (function hostessFactory() {
 		
 		var calls = [];
 
-		// Don't try to serve a file not on our seating chart.
-		if (seating_chart.indexOf(my_path_hash) >= 0) {		
-			calls.push(new Promise(
-				function(resolve, reject) {
+		try {
 
-					// First check for a real path.
-					// Serve the file, if found.
-					fs.readFile(path, function (err, data) {
-				        if (err) { console.log(err); return; }
-						console.log('Serving ' + extension + '.');
-						
-						// Write our header before we present the file.
-						writeHeader(response, extension);
+			// Check for a real file before a virtual path.
+			if (fileExists(path, seating_chart) === true) {
+				var serve_physical_file = getFile(path);
+				var write_physical_file = serveFileAsResponse(serve_physical_file, response, extension);
 
-						// Write the data.
-						response.write(data);
+				// Add our promises to our response array, so we don't terminate too early.
+				calls.concat([serve_physical_file,write_physical_file]);
+			}
+			// If the file wasn't real, check for a virtual route.
+			else {		
 
-						// Indicate success.
-						resolve(true);
-					});
-				}));
-		}
-		// If the file wasn't real, check for a virtual route.
-		else {		
+				console.log('Checking for a virtual path: ' + path);
 
-			console.log('Checking for a virtual path: ' + path);
+				// Look for a map to a virtual path callback.
+				// If found, we'll get a menu item result.
+				var virtual_path = resolveVirtualPath(path);
 
-			// Look for a map to a virtual path callback.
-			// If found, we'll get a menu item result.
-			var virtual_path = resolveVirtualPath(path);
+				if (virtual_path === false) {
+					throw new Error('Virtual path could not be resolved.');
+				}
 
-			if (virtual_path !== false) {
-
-				/**
-				   
-				   @TODO
-
-				 */
 				console.log('Seating a virtual path: ');
 				console.log(virtual_path);
 
@@ -149,7 +130,6 @@ var hostess = (function hostessFactory() {
 				console.log(' - - - - - - - - - ');
 				
 
-
 				// If menu item has a callback, check for args. Then call the callback, passing args if available.
 				// check for placeholder args, like GLOBAL_RESPONSE, which should but supplimented with the response object.
 				if (menu_path_info.callback) {
@@ -163,7 +143,7 @@ var hostess = (function hostessFactory() {
 						});
 					}
 
-							// Make sure we have access, or REJECT.	
+					// Make sure we have access, or REJECT.	
 					if (menu_path_info.access 
 						&& !hostess.accessCheck('anonymous', menu_path_info.access)) {
 						response.writeHead(403, {"Content-Type": "text/plain"});
@@ -171,33 +151,88 @@ var hostess = (function hostessFactory() {
 						response.end();
 					}
 					else {
-//						console.log('Passing in args:');
-//						console.log(args);
+						if (menu_path_info.template) {
+							console.log('Template attached to internal path. Fetching...');
+							// Fetch template.
+							var template_response = getTemplate(menu_path_info.template);
 
+							template_response.then(function(data){ 
+								console.log('Template loaded...');
+								console.log(data);
+							})
+							.catch(function(err){
+								console.log('Error fetching template: ' . err);
+							});
+						}
 
 						// Execute the callback with our processed args.
 						var internal_response = menu_path_info.callback.apply (null, args);
 
-						/**
-						   @TODO
 
-						     What is the flow here?
-
-						     When the Lorem Ipsum Timeout Module fires off all it's promises, it return them.
-						     As they resolve, the server.js Promise.All(); Fires, causing response to close
-						     before we've finished writing.
-						 */
 						// Merge or push any promises to the promise array.
-						if (Array.isArray(internal_response)) {
+						if (menu_path_info.template) {
+							var module_response = internal_response.then(function captureModuleTemplateResponse (modResp) {
+								console.log('Module Callback returned a response: ');
+								console.log(modResp);
+								
+								// Process response...
+								/**
+								   
+								   @TODO
+
+								 */
+
+								resolve(modResp);
+							});
+
+							var template_complete = Promise.all([module_response,template_response])
+								.then(function (module_data) {
+									console.log('Made it to template complete THEN()');
+
+									// The data from the module.
+									module_response;
+
+									// The data from the template.
+									template_response;
+
+									console.log('Here is our promise where we are ready to process our template:');
+									console.log(module_response);
+									console.log(template_response);
+								});
+
+							calls.push(template_complete);
+						}
+						else if (Array.isArray(internal_response)) {
 							// Push our promise(s) onto the return array.
 							calls.concat(internal_response);
 						}
 						else {
 							calls.push(internal_response);
 						}
+
+
+						/**
+						 
+						   @TODO
+							1. If this has a template associated with the path menu item, try to load that template file.
+
+							2. Accept the callback promise, and .then() should accept an object of the return data.
+
+							3. Pass the return data and template to a theming layer.
+
+						 */
+						if (menu_path_info.template) {
+							// Look for the template.
+							
+
+						}
 					}
 				}
 			}
+		}
+		catch (Error) {
+			console.log('A hostess exception occured.');
+			console.log(Error);
 		}
 
 		return calls;
@@ -238,6 +273,132 @@ var hostess = (function hostessFactory() {
 	function reservationType (path) {
 		var extension = path.match(/\.([0-9a-z]+)(?=[?#])|(\.)(?:[\w]+)$/);
 		console.log(path + ' is of type ' + extension + '.');
+	}
+
+
+	/**
+
+
+	    @TODO
+			SEATING CHART should be removed form here.
+
+
+	 */
+	function getTemplate(path, seating_chart) {
+
+		/**
+		   @todo
+
+		     If we want to check multiple paths for our template,
+		     check each location, using a separate promise.
+		 */
+		
+		console.log('Got to a template fetch... Before Promise.');
+
+		return new Promise(function (resolve, reject){
+
+			// Attempt to load a template.
+			if (fileExists(path, seating_chart) === false) {
+				console.log('Template file, ' + path + ', does not exist.');
+				reject('Template file does not exist.');
+			}
+
+			console.log(path + 'was found. Fetching...');
+
+			// Return the getFile promise, which will be the contents of the template file.
+			return getFile(path);
+		});
+	}
+
+
+	/**
+	 * Check if a file was in our seating chart.
+	 * 
+	 * @param {string} path
+	 *   A path relative to our docroot.
+	 * @param  {[type]} seating_chart
+	 *   A hash map of our file system, relative to our docroot.
+	 * 
+	 * @return {boolean}
+	 *   TRUE if a path could be found. Otherwise FALSE.
+	 *
+	 * @TODO
+	 * @note
+	 *   This only checks if the file existed at the time the server was started.
+	 *   It does not account for any files added since spin-up of our node script.
+	 */
+	function fileExists(path, seating_chart) {
+
+		// Hash our path, and check the seating chart.
+		// If the file was not in our file hash map, don't try to load it.
+		var my_path_hash = sutil.hash(path);
+
+		// Don't try to serve a file not on our seating chart.
+		if (seating_chart.indexOf(my_path_hash) >= 0) {
+			return true;
+		}
+
+		return false;
+	}
+
+
+	/**
+	 * Attempt to load a file from the file system.
+	 * 
+	 * @param {string} path
+	 *   A path, relative to our docroot.
+	 * 
+	 * @return {Promise}
+	 *   A promise, which resolves with the data from the file.
+	 */
+	function getFile(path) {
+		return new Promise(
+			function(resolve, reject) {
+
+				// First check for a real path.
+				// Serve the file, if found.
+				fs.readFile(path, function (err, data) {
+			        if (err) { reject(err); }
+					// Indicate success.
+					resolve(data);
+				});
+			}
+		);
+	}
+
+
+	/**
+	 * Take a promise from a file load,
+	 * and serve the data as the complete response.
+	 * 
+	 * @param  {Promise} file_loaded
+	 *   A promise of a file loaded, with the data of the file passed.
+	 * @param {obj} response
+	 *   The response object for the server request.
+	 * @param {string} extension
+	 *   The file extension which should be used to set the
+	 *   response headers.
+	 * 
+	 * @return {Promise}
+	 *   A promise which will complete by writing the file contents
+	 *   to the response.
+	 */
+	function serveFileAsResponse(file_loaded, response, extension) {
+		return file_loaded
+			.then(function writeFileToResponse (data) {
+				console.log('Serving ' + extension + '.');
+				
+				// Write our header before we present the file.
+				writeHeader(response, extension);
+
+				// Write the data.
+				response.write(data);
+
+				resolve(true);
+			})
+			.catch(function serveFileCatch(err) {
+				console.log('Error serving physical file. Message: ' . err);
+			});
 	}
 
 

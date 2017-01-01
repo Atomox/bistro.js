@@ -9,6 +9,13 @@ var myFirstModule = (function (){
 	 */
 	var paths = [
 		{
+			path: 'first',
+			title: 'My First Module',
+			access: 'access content',
+			callback: general_content_callback,
+			template: 'my_first_module.tpl',
+		},
+		{
 			path: 'content/*',
 			id: 1,
 			title: 'General Content',
@@ -72,7 +79,14 @@ var myFirstModule = (function (){
 		Testing out our first function. Hook this up.
 	 */
 	function general_content_callback() {
-		return "Hello World";	
+		return new Promise(
+			function(resolve, reject) {
+				resolve({
+					message: "Hi Dad Soup",
+					body: "ERAUQS SI DLRO WEHT"
+				});
+			}
+		);
 	}
 
 	return {

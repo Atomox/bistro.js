@@ -1,0 +1,11 @@
+<html>
+	<body>
+		<h1>
+			{{[message|string]}}
+		</h1>
+		<hr>
+		{{
+			[body|text]
+		}}
+	</body>
+</html>
