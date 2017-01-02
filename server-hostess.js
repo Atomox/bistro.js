@@ -97,10 +97,11 @@ var hostess = (function hostessFactory() {
 			// Check for a real file before a virtual path.
 			if (fileExists(path, seating_chart) === true) {
 				var serve_physical_file = getFile(path);
+
 				var write_physical_file = serveFileAsResponse(serve_physical_file, response, extension);
 
 				// Add our promises to our response array, so we don't terminate too early.
-				calls.concat([serve_physical_file,write_physical_file]);
+				calls = calls.concat([serve_physical_file, write_physical_file]);
 			}
 			// If the file wasn't real, check for a virtual route.
 			else {		
@@ -115,9 +116,6 @@ var hostess = (function hostessFactory() {
 					throw new Error('Virtual path could not be resolved.');
 				}
 
-				console.log('Seating a virtual path: ');
-				console.log(virtual_path);
-
 				// If we have found a virtual path match,
 				// set it as our menu item.
 				menu_item = virtual_path.match;
@@ -125,6 +123,7 @@ var hostess = (function hostessFactory() {
 				menu_path_info = menu_item.data;
 				var args = [];
 
+				console.log('Seating a virtual path: ');
 				console.log(' - - - - - - - - - ');
 				console.log(menu_path_info);
 				console.log(' - - - - - - - - - ');
@@ -148,84 +147,77 @@ var hostess = (function hostessFactory() {
 						&& !hostess.accessCheck('anonymous', menu_path_info.access)) {
 						response.writeHead(403, {"Content-Type": "text/plain"});
 						response.write('403 | Forbidden');
-						response.end();
+						throw new Error('Permission denied.');
 					}
-					else {
-						if (menu_path_info.template) {
-							console.log('Template attached to internal path. Fetching...');
-							// Fetch template.
-							var template_response = getTemplate(menu_path_info.template);
-
-							template_response.then(function(data){ 
+			
+					// If we have an associated template, fetch it.
+					if (menu_path_info.template) {
+						var template_response = getTemplate(menu_path_info.template);
+						var template_data = template_response
+							.then(function(data){ 
 								console.log('Template loaded...');
-								console.log(data);
+								return data;
 							})
 							.catch(function(err){
 								console.log('Error fetching template: ' . err);
 							});
-						}
+						calls = calls.concat([template_response, template_data]);
+					}
 
-						// Execute the callback with our processed args.
-						var internal_response = menu_path_info.callback.apply (null, args);
+					// Execute the callback with our processed args.
+					var internal_response = menu_path_info.callback.apply (null, args);
 
-
-						// Merge or push any promises to the promise array.
-						if (menu_path_info.template) {
-							var module_response = internal_response.then(function captureModuleTemplateResponse (modResp) {
+					// Merge or push any promises to the promise array.
+					if (menu_path_info.template) {
+						var module_response = internal_response
+							.then(function captureModuleTemplateResponse (modResp) {
 								console.log('Module Callback returned a response: ');
 								console.log(modResp);
 								
-								// Process response...
 								/**
-								   
 								   @TODO
-
+								     Process response.
 								 */
 
-								resolve(modResp);
+								return modResp;
 							});
 
-							var template_complete = Promise.all([module_response,template_response])
-								.then(function (module_data) {
-									console.log('Made it to template complete THEN()');
+						var template_complete = Promise.all([module_response,template_data])
+							.then(function (module_data) {
+								console.log('Here is our promise where we are ready to process our template:');
+								var mod_data = module_data[0];
+								var tpl = module_data[1];
 
-									// The data from the module.
-									module_response;
+								console.log(mod_data);
+								console.log(tpl.toString());
+							});
 
-									// The data from the template.
-									template_response;
+						calls = calls.concat([module_response,template_complete]);
+					}
 
-									console.log('Here is our promise where we are ready to process our template:');
-									console.log(module_response);
-									console.log(template_response);
-								});
-
-							calls.push(template_complete);
-						}
-						else if (Array.isArray(internal_response)) {
-							// Push our promise(s) onto the return array.
-							calls.concat(internal_response);
-						}
-						else {
-							calls.push(internal_response);
-						}
+					if (Array.isArray(internal_response)) {
+						// Push our promise(s) onto the return array.
+						calls = calls.concat(internal_response);
+					}
+					else {
+						calls.push(internal_response);
+					}
 
 
-						/**
-						 
-						   @TODO
-							1. If this has a template associated with the path menu item, try to load that template file.
+					/**
+					 
+					   @TODO
+						1. If this has a template associated with the path menu item, try to load that template file.
 
-							2. Accept the callback promise, and .then() should accept an object of the return data.
+						2. Accept the callback promise, and .then() should accept an object of the return data.
 
-							3. Pass the return data and template to a theming layer.
+						3. Pass the return data and template to a theming layer.
 
-						 */
-						if (menu_path_info.template) {
-							// Look for the template.
-							
+					 */
+					if (menu_path_info.template) {
+						// Look for the template.
+						
 
-						}
 					}
 				}
 			}
@@ -273,6 +265,7 @@ var hostess = (function hostessFactory() {
 	function reservationType (path) {
 		var extension = path.match(/\.([0-9a-z]+)(?=[?#])|(\.)(?:[\w]+)$/);
 		console.log(path + ' is of type ' + extension + '.');
+		return extension;
 	}
 
 
@@ -294,7 +287,31 @@ var hostess = (function hostessFactory() {
 		 */
 		
 		console.log('Got to a template fetch... Before Promise.');
+		
+/**
+ 
 
+	@TODO
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ */
+
+
+		// Return the getFile promise, which will be the contents of the template file.
+		return getFile(path);
+/**
 		return new Promise(function (resolve, reject){
 
 			// Attempt to load a template.
@@ -308,6 +325,7 @@ var hostess = (function hostessFactory() {
 			// Return the getFile promise, which will be the contents of the template file.
 			return getFile(path);
 		});
+*/
 	}
 
 
@@ -355,11 +373,15 @@ var hostess = (function hostessFactory() {
 		return new Promise(
 			function(resolve, reject) {
 
+				// Set an absolute path.
+				path = __dirname + '/' + path;
+
+				console.log('File resolves to: ' + path);
+
 				// First check for a real path.
 				// Serve the file, if found.
 				fs.readFile(path, function (err, data) {
-			        if (err) { reject(err); }
-					// Indicate success.
+			        if (err) { reject('Error reading file: ' + err); }
 					resolve(data);
 				});
 			}
@@ -384,8 +406,9 @@ var hostess = (function hostessFactory() {
 	 *   to the response.
 	 */
 	function serveFileAsResponse(file_loaded, response, extension) {
-		return file_loaded
-			.then(function writeFileToResponse (data) {
+		file_loaded
+			.then(function writeFileToResponse (data, extension) {
+
 				console.log('Serving ' + extension + '.');
 				
 				// Write our header before we present the file.

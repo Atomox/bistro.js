@@ -88,11 +88,13 @@ function onRequest(request, response) {
 	// Once all promises complete, wrap it up.
 	Promise.all(calls)
 		.then(function thenResponse() {
-			console.log('Ending response.');
+			console.log('Ending response for ' + request.url);
 			response.end();
 		})
-		.catch(function errPromiseAll(){ 
-			response.write('Error completing all promises');
-			response.end(); });
+		.catch(function errPromiseAll(err) { 
+			console.log('Error completing all promises.');
+			console.log(err);
+			response.end(); 
+		});
 
 }

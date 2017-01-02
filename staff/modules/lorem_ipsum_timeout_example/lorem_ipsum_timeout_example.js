@@ -45,6 +45,9 @@ var lorem_ipsum_module = (function lorem_ipsum_example_factory() {
 		// Print a valid header.
 		response.writeHead(200, {"Content-Type": "text/html"});
 
+		// Attach css.
+		waiter.includeFile('css', '../../server-tablecloth.css', response);
+
 		// Debugger to the screen.
 //		bb(request, response);
 
