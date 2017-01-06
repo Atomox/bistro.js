@@ -16,8 +16,7 @@ var chef = (function chefFactory() {
 	 */
 	function processTemplate(data, template) {
 
-		return new Promise(function (resolve, reject){
-			// Return the getFile promise, which will be the contents of the template file.
+		return new Promise(function (resolve, reject) {
 			resolve(parse(template, data, '{{', '}}', processControlBlock));
 		});
 	}
@@ -44,9 +43,6 @@ var chef = (function chefFactory() {
 	function parse (template, vars, delimeter_left, delimeter_right, blockProcessCallback) {
 
 		console.log('Parsing template with delimeters: ' + delimeter_left + ' ' + delimeter_right);
-
-		var left_pattern = new RegExp(delimeter_left + "[\s\S]*?"),
-			right_pattern = new RegExp(delimeter_right + "[\s\S]*?");
 
 		var left = '',
 			right = template,
