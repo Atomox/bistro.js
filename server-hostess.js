@@ -2,13 +2,14 @@
 fs = require('fs');
 
 // Custom
-sutil = require('./includes/server-utils'),
+var sutil = require('./includes/server-utils'),
 /**
    @TODO
      Let's find a *safer* way to provide this to our module.
  */
-payroll = require('./server-payroll'),
-paths = require('./includes/server-paths.js');
+	payroll = payroll || require('./server-payroll'),
+	paths = paths || require('./includes/server-paths.js'),
+    chef = chef || require('./server-chef.js');
 
 
 
@@ -154,11 +155,11 @@ var hostess = (function hostessFactory() {
 					if (menu_path_info.template) {
 						var template_response = getTemplate(menu_path_info.template);
 						var template_data = template_response
-							.then(function(data){ 
+							.then(function(data) { 
 								console.log('Template loaded...');
-								return data;
+								return data.toString();
 							})
-							.catch(function(err){
+							.catch(function(err) {
 								console.log('Error fetching template: ' . err);
 							});
 						calls = calls.concat([template_response, template_data]);
@@ -167,13 +168,10 @@ var hostess = (function hostessFactory() {
 					// Execute the callback with our processed args.
 					var internal_response = menu_path_info.callback.apply (null, args);
 
-					// Merge or push any promises to the promise array.
+					// Prep module response for templating.
 					if (menu_path_info.template) {
 						var module_response = internal_response
 							.then(function captureModuleTemplateResponse (modResp) {
-								console.log('Module Callback returned a response: ');
-								console.log(modResp);
-								
 								/**
 								   @TODO
 								     Process response.
@@ -182,42 +180,33 @@ var hostess = (function hostessFactory() {
 								return modResp;
 							});
 
+
+						// Process the template.
 						var template_complete = Promise.all([module_response,template_data])
 							.then(function (module_data) {
-								console.log('Here is our promise where we are ready to process our template:');
 								var mod_data = module_data[0];
 								var tpl = module_data[1];
 
-								console.log(mod_data);
-								console.log(tpl.toString());
+								// Evaluate the template, and output it.
+								var processed_template = chef.processTemplate(mod_data, tpl);								
+								var output_template = processed_template
+									.then(function (parsed_tpl) {
+										response.write(parsed_tpl);
+									});
+
+								calls = calls.concat([processed_template, output_template]);
 							});
 
 						calls = calls.concat([module_response,template_complete]);
 					}
 
+					// Merge or push any promises to the promise array.
 					if (Array.isArray(internal_response)) {
 						// Push our promise(s) onto the return array.
 						calls = calls.concat(internal_response);
 					}
 					else {
 						calls.push(internal_response);
-					}
-
-
-					/**
-					 
-					   @TODO
-						1. If this has a template associated with the path menu item, try to load that template file.
-
-						2. Accept the callback promise, and .then() should accept an object of the return data.
-
-						3. Pass the return data and template to a theming layer.
-
-					 */
-					if (menu_path_info.template) {
-						// Look for the template.
-						
-
 					}
 				}
 			}
@@ -285,29 +274,6 @@ var hostess = (function hostessFactory() {
 		     If we want to check multiple paths for our template,
 		     check each location, using a separate promise.
 		 */
-		
-		console.log('Got to a template fetch... Before Promise.');
-		
-/**
- 
-
-	@TODO
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- */
-
 
 		// Return the getFile promise, which will be the contents of the template file.
 		return getFile(path);
