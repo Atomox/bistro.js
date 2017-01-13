@@ -83,7 +83,13 @@ var myFirstModule = (function (){
 			function(resolve, reject) {
 				resolve({
 					message: "Hi Dad Soup",
-					body: "ERAUQS SI DLRO WEHT"
+					body: "ERAUQS SI DLRO WEHT",
+					people: [
+						{first: 'Alan', last: 'Alda'},
+						{first: 'Ben', last: 'Bova'},
+						{first: 'Carl', last: 'Sagan'},
+						{first: 'Denis', last: 'Hopper'}
+					]
 				});
 			}
 		);

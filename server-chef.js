@@ -17,7 +17,10 @@ var chef = (function chefFactory() {
 	function processTemplate(data, template) {
 
 		return new Promise(function (resolve, reject) {
-			resolve(parse(template, data, '{{', '}}', processControlBlock));
+			resolve(parse(template, data, [
+					{left: '{{', right: '}}', callback: processControlBlock}
+				]
+			));
 		});
 	}
 
@@ -29,40 +32,61 @@ var chef = (function chefFactory() {
 	 *   A string of data we should parse.
 	 * @param  {Object} vars
 	 *   A set of data we should pass to the callback for contextual evaluating of any matched blocks.
-	 * @param  {string} delimeter_left
-	 *   A delimeter denoting the start of a code block.
-	 * @param  {string} delimeter_right
-	 *   A delimeter denoting the end of a code block.
-	 * @param  {[type]} blockProcessCallback
-	 *   A callback function we should pass any blocks we find to. Should expect (string, vars),
-	 *   and replace any control blocks with evaluated strings.
+	 * @param {array(object)} delim_lft_rt_callback
+	 *   An array of 1 or more objects with three attributes:
+	 *   | @param  {string} delimeter_left
+	 *   |   A delimeter denoting the start of a code block.
+	 *   | @param  {string} delimeter_right
+	 *   |   A delimeter denoting the end of a code block.
+	 *   | @param  {[type]} callback
+	 *   |   A callback function we should pass any blocks we find to. Should expect (string, vars),
+	 *   |   and replace any control blocks with evaluated strings.
 	 * 
 	 * @return {string}
 	 *   The template, with all blocks evaluated.
 	 */
-	function parse (template, vars, delimeter_left, delimeter_right, blockProcessCallback) {
+	function parse (template, vars, delim_lft_rt_callback) {
 
 		console.log('Parsing template with delimeters: ' + delimeter_left + ' ' + delimeter_right);
 
 		var left = '',
 			right = template,
-			current_segment = null;
+			current_segment = null,
+			blockProcessCallback = null;
 
 		// Process the template until it's been consumed, and no outstanding segments remain.
 		while (right.length > 0 || current_segment !== null) {
 
 			// Process any outstanding segments.
 			if (current_segment !== null) {
-				left += blockProcessCallback(current_segment,vars);
+				current_segment = blockProcessCallback(current_segment,vars);
+				left += (typeof current_segment.data == 'string') ? current_segment.data : '';
 				current_segment = null;
 			}
 			// If no current segment, look for next one.
 			else {
-				// Get everything up to our opening paren, and add to complete.
-				// If no seperator is found, we're done.
-				var temp = sutil.splitOnce(right,delimeter_left);
-				left += temp[0];
-				right = (temp[1]) ? temp[1] : '';
+				
+				var first = null, tmp_l = null, tmp_r = null,
+					tmp_callback = null, last_delimeter_right = null;
+
+				// In case we have multiple delimeter pairs,
+				// look for whichever occurs first, and use that one.
+				for (var z = 0; z < delim_lft_rt_callback.length; z++) {
+					var zObj = delim_lft_rt_callback[z];
+
+					// Get everything up to our opening paren, and add to complete.
+					// If no seperator is found, we're done.
+					var temp = sutil.splitOnce(right,zObj.left);				
+					if (temp[0].length < tmp_l.length || tmp_l === null) {
+						tmp_l = temp[0];
+						tmp_r = (temp[1]) ? temp[1] : '';
+						blockProcessCallback = zObj.callback;
+						last_delimeter_right = zObj.right;
+					}
+				}
+
+				left += temp_l;
+				right = temp_r;
 
 				// If we found a start, right should be a block code segment.
 				// Split again by end delimeter.
@@ -70,7 +94,7 @@ var chef = (function chefFactory() {
 					// Get everything up to our first closing paren,
 					// and make it our current_segment.
 					// Add remainder as the remaining right.
-					temp = sutil.splitOnce(right,delimeter_right);
+					temp = sutil.splitOnce(right,last_delimeter_right);
 					current_segment = temp[0];
 					right = (temp[1]) ? temp[1] : '';
 				}
@@ -98,7 +122,65 @@ var chef = (function chefFactory() {
 	 *   The segment, with all commands parsed and evaluated.
 	 */
 	function processControlBlock (segment, vars) {
-		return parse(segment, vars, '[', ']', processCommandBlock);
+
+		// Look for the skip_mode string. Disgard everything until we find it.
+		// Until we do, don't parse anything.
+		var temp = sutil.splitOnce(segment,skip_until);
+		segment = (temp[1] || temp[1] === '') ? temp[1] : false;
+		
+		return {
+			mode: null,
+			data: (segment.length > 0) 
+				? parse(segment, vars, [
+						{
+							left: '[',
+							right: ']', 
+							callback: processCommandBlock
+						},
+						{
+							left: '#', 
+							right: "\n",
+							callback: processReserveWords
+						}
+						// @TODO
+						//   How do we detect closing tags, like /if?
+					]) 
+				: ''
+		}
+	}
+
+
+	function processReserveWords (segment, vars) {
+
+		console.log(' <<< Process Reserve Words >>> ');
+		console.log(vars);
+		console.log(segment);
+
+		// Parse for block functions. These should be the very first words in the segment,
+		// since detecting a # is what got us here.
+		// 
+		// I.E. 
+		//   #each people AS key => value
+		//   
+		//   Would be passed as:
+		//   
+		//   each people AS key => value
+		//   
+		var function_list = [
+			'each',  
+			'if',  
+			'else',  
+			'switch',  
+			'case',  
+			'break',  
+			'var'  
+		];
+
+		/**
+		 * 
+		 */
+		
+		return '<<<<<' + segment + '>>>>>';
 	}
 
 

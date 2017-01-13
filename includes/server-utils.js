@@ -34,7 +34,8 @@ var server_utils = (function utils() {
 	 * @param  {string} str
 	 *   A string to split.
 	 * @param  {string} delimeter
-	 *   A delimter to split around.
+	 *   A delimter to split around. If "\n" is passed, we'll search for multiple types of new lines,
+	 *   and split on the first one occuring in the string.
 	 *   
 	 * @return {array}
 	 *   An array of up to 2 results, where [0] is the left side of the string at the first delimeter occurance,
@@ -47,8 +48,28 @@ var server_utils = (function utils() {
 			throw new Error('splitOnce() expects string value.');
 		}
 
-		var pos = str.indexOf(delimeter),
-			results = [];
+		var pos = -1, results = [];
+
+		/**
+		   @TODO
+
+		     This is untested.
+
+		 */
+		// When newline is the character, check for the first existance of
+		// multiple types of new lines (can change per environment).
+		if (delimeter === "\n") {
+			var eol = ["\n", "\r", "\r\n"];
+			for (var i = 0; i < eol.length; i++) {
+				var tmp = str.indexOf(eol[i]);
+				if (pos < 0 || tmp < pos) { 
+					pos = tmp; 
+				}
+			}
+		}
+		else {
+			pos = str.indexOf(delimeter);
+		}
 
 		// If there is no delimeter, return the entire array as results[0].
 		if (pos == -1) {
@@ -59,6 +80,11 @@ var server_utils = (function utils() {
 		// Only have a second have if we found a pos
 		if (pos < str.length-delimeter.length) {
 			results[1] = str.substring(pos+delimeter.length);
+		}
+		// Even if delimeter was at the end of the string,
+		// include [1] to show that it was found.
+		else {
+			results[1] = '';
 		}
 
 		return results;
