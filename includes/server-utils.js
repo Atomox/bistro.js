@@ -48,8 +48,6 @@ var server_utils = (function utils() {
 			throw new Error('splitOnce() expects string value.');
 		}
 
-		console.log('splitOnce: ' + str + delimeter);
-
 		var pos = -1, results = [];
 
 		/**

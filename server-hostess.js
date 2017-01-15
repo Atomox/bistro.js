@@ -194,6 +194,10 @@ var hostess = (function hostessFactory() {
 										response.write(parsed_tpl);
 										console.log('Final response:');
 										console.log(parsed_tpl);
+									})
+									.catch(function (err){
+										console.log('An error occured during template parsing.');
+										console.log(err);
 									});
 
 								calls = calls.concat([processed_template, output_template]);

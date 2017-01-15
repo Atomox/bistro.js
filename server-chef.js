@@ -1,6 +1,7 @@
 var sutil = sutil || require('./includes/server-utils');
 
 var chef = (function chefFactory() {
+const BISTRO_FAILURE = '__FAILURE';
 
 	/**
 	 * Given a template and some contextual data, parse, evaluate,
@@ -17,10 +18,17 @@ var chef = (function chefFactory() {
 	function processTemplate(data, template) {
 
 		return new Promise(function (resolve, reject) {
-			resolve(parse(template, data, [
-					{left: '{{', right: '}}', callback: processControlBlock}
-				]
-			));
+			try {
+				var parsed_tpl = parse(template, data, [
+						{left: '{{', right: '}}', callback: processControlBlock}
+					]
+				);
+
+				resolve(parsed_tpl);
+			}
+			catch(Error){
+				reject(Error);	
+			}
 		});
 	}
 
@@ -46,6 +54,9 @@ var chef = (function chefFactory() {
 	 *   The template, with all blocks evaluated.
 	 */
 	function parse (template, vars, delim_lft_rt_callback) {
+
+		// Initialize scope stacks.
+		initializeScope(vars);
 
 		console.log('Parsing template with delimeters: ');
 		console.log(delim_lft_rt_callback);
@@ -169,15 +180,28 @@ var chef = (function chefFactory() {
 		//   
 		//   each people AS key => value
 		//   
-		var function_list = [
-			'each',  
-			'if',  
-			'else',  
-			'switch',  
-			'case',  
-			'break',  
-			'var'  
-		];
+		var function_list = {
+			each: reserveWord_each,
+			if: reserveWord_if,  
+			else: '',  
+			switch: '',  
+			case: '',  
+			break: '',  
+			var: ''
+		};
+
+		// Split by the first word.
+		var temp = sutil.splitOnce(segment, ' ');
+
+		var reserve = temp[0],
+			args = (temp[1]) ? temp[1] : null;
+
+		if (function_list[reserve]) {
+			segment = function_list[reserve](args, vars);
+		}
+		else {
+			throw new Error('Could not eval: ' + segment);
+		}
 
 		/**
 		 * @todo 
@@ -186,6 +210,28 @@ var chef = (function chefFactory() {
 		
 		return '<<<<<' + segment + '>>>>>';
 	}
+
+
+	function reserveWord_each(args, vars) {
+		addScope('each', args, vars);
+		return '<<<< foreach(' + args + ') >>>>';
+	}
+
+	function reserveWord_if(args, vars) {
+
+		/**
+		   @TODO
+		     Split args, and eval one at a time.
+		 */
+		var var_value = evalScope(args, vars);
+		if (var_value !== BISTRO_FAILURE && var_value) {
+			return 'if(true)';
+		}
+
+		return '<<<< if (true === false) >>>>';
+	}
+
+
 
 
 	/**
@@ -204,9 +250,9 @@ var chef = (function chefFactory() {
 	 */
 	function processCommandBlock (segment, vars) {
 
-//		console.log(' <<< Process Command Block >>> ');
-//		console.log(vars);
-//		console.log(segment);
+		console.log(' <<< Process Command Block >>> ');
+		console.log(vars);
+		console.log(segment);
 
 		// This should be either a function or a pattern...
 		var params = segment.split('|');
@@ -221,11 +267,11 @@ var chef = (function chefFactory() {
 				case 'list':
 				case 'string':
 
-					if (vars[params[0]]) {
-						maps_to = vars[params[0]];
+					var var_value = evalScope(params[0], vars);
+					if (var_value !== BISTRO_FAILURE) {
+						maps_to = var_value;
 					}
 					else {
-						console.log('<!> ERROR! -- Cannot map variable: ' + params[0]);
 						throw new Error('Bad template variable reference: ' + params[0]);
 					}
 					break;
@@ -241,6 +287,126 @@ var chef = (function chefFactory() {
 			}
 		}
 		return maps_to;
+	}
+
+
+	/**
+	 * Initialize scope storrage within our current vars object.
+	 * This should be done before any parsing or object resolution is run.
+	 * 
+	 * @param {object} vars
+	 *   (PASSED BY REFERENCE) The vars object being passed around,
+	 *   where we store not only variables but scope.
+	 */
+	function initializeScope(vars) {
+
+		if (!vars['__scope']) {
+			vars['__scope'] = {
+				each: []
+			};
+		}
+		if (!vars['__stack']) {
+			vars['__stack'] = {
+			
+/**
+ * if
+ *   each 
+ *   	if
+ *   		each
+ *     			if
+ *     			/if
+ *        	/each
+ *      /if
+ *      else
+ *      	each
+ *       		if
+ *
+ * 				elseif
+ *     				each
+ * 				else
+ *
+ * 				/if
+ * 			/each
+ * 		/if
+ *   /each
+ * /if
+ *
+ * stack:
+ * 1.	  if => data => ''
+ *
+ * 2.	  each => data => ''
+ * 	  
+ * 
+ */
+
+
+			}
+		}
+	}
+
+
+	/**
+	 * Push a scope variable reference to the scope stack.
+	 * 
+	 * @param {string} op
+	 *   The reserve word defining the scope.
+	 * @param {string} context_var
+	 *   The string name in context.
+	 * @param {object} vars
+	 *   (PASSED BY REFERENCE) The vars object being passed around,
+	 *   where we store not only variables but scope.
+	 */
+	function addScope(op, context_var, vars) {
+		vars['__scope'][op].push(context_var.trim());
+	}
+
+
+	/**
+	 * Given a variable name, determine the value based upon the currently defined scope.
+	 * 
+	 * @param  {[type]} val  [description]
+	 * @param {object} vars
+	 *   (PASSED BY REFERENCE) The vars object being passed around,
+	 *   where we store not only variables but scope.
+	 *   
+	 * @return {[type]}      [description]
+	 */
+	function evalScope(val, vars) {
+
+		console.log('');
+		console.log(' -> Eval scope for: ' + val);
+
+
+		// Check the current scope for relevant context.
+		// In scope, this value is probably attached to a parent element.
+		// 
+		//   E.G. __scope.each.0.people might have .name, so when .name is requested,
+		//   look through the scope for any objects with .name as a child.
+		if (vars['__scope']['each']) {
+
+
+			console.log(' -> Eval scope in each...');
+
+
+			for (var i = vars['__scope']['each'].length - 1; i >= 0; i--) {
+				var tmp = vars['__scope']['each'][i];
+
+				console.log('   -> Eval scope in each: ' + i);
+				console.log(vars[tmp]);
+
+				if (vars[tmp] && typeof vars[tmp] === 'object' && vars[tmp][0][val]) {
+					console.log('Found ' + val + ' in scope...');
+					return vars[tmp][0][val];
+				}
+			}
+		}
+
+		// Simple, base scope reference.
+		if (vars[val]) {
+			return vars[val];
+		}
+
+		return BISTRO_FAILURE;
 	}
 
 	
