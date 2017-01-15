@@ -192,6 +192,8 @@ var hostess = (function hostessFactory() {
 								var output_template = processed_template
 									.then(function (parsed_tpl) {
 										response.write(parsed_tpl);
+										console.log('Final response:');
+										console.log(parsed_tpl);
 									});
 
 								calls = calls.concat([processed_template, output_template]);

@@ -47,7 +47,8 @@ var chef = (function chefFactory() {
 	 */
 	function parse (template, vars, delim_lft_rt_callback) {
 
-		console.log('Parsing template with delimeters: ' + delimeter_left + ' ' + delimeter_right);
+		console.log('Parsing template with delimeters: ');
+		console.log(delim_lft_rt_callback);
 
 		var left = '',
 			right = template,
@@ -60,7 +61,7 @@ var chef = (function chefFactory() {
 			// Process any outstanding segments.
 			if (current_segment !== null) {
 				current_segment = blockProcessCallback(current_segment,vars);
-				left += (typeof current_segment.data == 'string') ? current_segment.data : '';
+				left += (typeof current_segment == 'string') ? current_segment : '';
 				current_segment = null;
 			}
 			// If no current segment, look for next one.
@@ -74,10 +75,14 @@ var chef = (function chefFactory() {
 				for (var z = 0; z < delim_lft_rt_callback.length; z++) {
 					var zObj = delim_lft_rt_callback[z];
 
+					console.log('Looping.... ' + z);
+					console.log(zObj);
+
 					// Get everything up to our opening paren, and add to complete.
 					// If no seperator is found, we're done.
 					var temp = sutil.splitOnce(right,zObj.left);				
-					if (temp[0].length < tmp_l.length || tmp_l === null) {
+					
+					if (tmp_l === null || temp[0].length < tmp_l.length) {
 						tmp_l = temp[0];
 						tmp_r = (temp[1]) ? temp[1] : '';
 						blockProcessCallback = zObj.callback;
@@ -85,8 +90,10 @@ var chef = (function chefFactory() {
 					}
 				}
 
-				left += temp_l;
-				right = temp_r;
+				left += tmp_l;
+				right = tmp_r;
+
+
 
 				// If we found a start, right should be a block code segment.
 				// Split again by end delimeter.
@@ -123,30 +130,26 @@ var chef = (function chefFactory() {
 	 */
 	function processControlBlock (segment, vars) {
 
-		// Look for the skip_mode string. Disgard everything until we find it.
-		// Until we do, don't parse anything.
-		var temp = sutil.splitOnce(segment,skip_until);
-		segment = (temp[1] || temp[1] === '') ? temp[1] : false;
+		console.log(' <<< Process Control Block >>> ');
+		console.log(vars);
+		console.log(segment);
 		
-		return {
-			mode: null,
-			data: (segment.length > 0) 
-				? parse(segment, vars, [
-						{
-							left: '[',
-							right: ']', 
-							callback: processCommandBlock
-						},
-						{
-							left: '#', 
-							right: "\n",
-							callback: processReserveWords
-						}
-						// @TODO
-						//   How do we detect closing tags, like /if?
-					]) 
-				: ''
-		}
+		return (segment.length > 0) 
+			? parse(segment, vars, [
+					{
+						left: '[',
+						right: ']', 
+						callback: processCommandBlock
+					},
+					{
+						left: '#', 
+						right: "\n",
+						callback: processReserveWords
+					}
+					// @TODO
+					//   How do we detect closing tags, like /if?
+				]) 
+			: '';
 	}
 
 
@@ -177,7 +180,8 @@ var chef = (function chefFactory() {
 		];
 
 		/**
-		 * 
+		 * @todo 
+		 *   if loop, add a map from param to subparams.
 		 */
 		
 		return '<<<<<' + segment + '>>>>>';
@@ -200,9 +204,9 @@ var chef = (function chefFactory() {
 	 */
 	function processCommandBlock (segment, vars) {
 
-		console.log(' <<< Process Command Block >>> ');
-		console.log(vars);
-		console.log(segment);
+//		console.log(' <<< Process Command Block >>> ');
+//		console.log(vars);
+//		console.log(segment);
 
 		// This should be either a function or a pattern...
 		var params = segment.split('|');
@@ -221,6 +225,7 @@ var chef = (function chefFactory() {
 						maps_to = vars[params[0]];
 					}
 					else {
+						console.log('<!> ERROR! -- Cannot map variable: ' + params[0]);
 						throw new Error('Bad template variable reference: ' + params[0]);
 					}
 					break;
