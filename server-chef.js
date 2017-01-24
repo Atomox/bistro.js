@@ -1,4 +1,7 @@
-var sutil = sutil || require('./includes/server-utils');
+var sutil = sutil || require('./includes/server-utils'),
+	parsetree = parsetree || require('./includes/server-parse-tree'),
+	stack = stack || require('./includes/server-stack');
+
 
 var chef = (function chefFactory() {
 const BISTRO_FAILURE = '__FAILURE';
@@ -19,10 +22,18 @@ const BISTRO_FAILURE = '__FAILURE';
 
 		return new Promise(function (resolve, reject) {
 			try {
+
+				// Old way:
+				/**
 				var parsed_tpl = parse(template, data, [
 						{left: '{{', right: '}}', callback: processControlBlock}
 					]
 				);
+				*/
+
+				// New way:
+				var parse_tree = parseTree(template);
+				var parsed_tpl = resolveParseTree(parse_tree, data);
 
 				resolve(parsed_tpl);
 			}
@@ -124,6 +135,177 @@ const BISTRO_FAILURE = '__FAILURE';
 
 
 	/**
+	 * @todo 
+	 *   Rewrite Parse using Tree.
+	 */
+	function parseTree (template) {
+		
+		var right = template,
+			tree = new parsetree.Tree('root', null),
+			parents = new stack.Stack();
+
+			// Push the root element onto the array.
+			parents.push(tree.getRoot());
+
+		while (right.length > 0) {
+
+			// Get next segment. {{SOME_SEGMENT}}
+			var tmp = parseNextSegment (right, '{{', '}}');
+
+			if (tmp.left.length > 0) {
+				tree.add('constant', parents.peek().id, parents.peek(), tmp.left);
+			}
+
+			// The command segment to analyze.
+			var segment = tmp.segment;
+
+			// The unprocessed remainder of the template.
+			right = (tmp.right.length > 0) ? tmp.right : null;
+
+			// Lexical analysis:
+			while (command = parseReserveWord(segment)) {
+
+				if (command.term && command.type) {
+					var my_leaf = null;
+					switch(command.type) {
+						case 'block':
+							// Add the block_word to the tree, and the parent to the stack.
+							my_leaf = tree.add(command.word, parents.peek().id, parents.peek(), segment);
+							parents.push(my_leaf);							
+							break;
+					
+						case 'block_terminus':
+							// Pop the parent off, add this as a parent.
+							parents.pop();
+							my_leaf = tree.add(command.word, parents.peek().id, parents.peek(), segment);
+							parents.push(my_leaf);
+							break;
+
+						case 'terminus':
+							// If the block_terminus pairs with the parent type,
+							// pop the next element off the stack, and make it the parent.
+							parents.pop();
+							break;
+
+						case 'reserve':
+							// add reserve words to tree.
+							/**
+							   @TODO
+							 */
+							break;
+
+						case 'variable':
+							// add variable
+							/**
+							   @TODO
+							 */
+							break;
+					}
+				}
+
+				/**
+				   @TODO
+
+				     As written, parseReserveWord does not return a remainder.
+				     This means only 1 reserve word per {}.
+
+				     Ultimately, we'll loop here.
+				 */
+				// Process the remainder.
+				segment = (command.remainder) ? command.remainder : null;
+			}
+		}
+	}
+
+
+	/**
+	 *
+	 * @param  {Tree} tree
+	 *   A parse tree, ready for contextual evaluation.
+	 * @param  {object} data
+	 *   The data object, as passed along with the original template.
+	 * 
+	 * @return {string}
+	 *   The final template, translated into normal HTML.
+	 */
+	function resolveParseTree (tree, data) {
+		/**
+		 
+
+			@TODO
+
+			  Evaluate the tree.
+
+			  From left-to-right, do a depth-first evaluation.
+
+			  	- Keep track of the context of the data.
+
+		 */
+	}
+
+
+
+	function parseReserveWord (segment) {
+
+		// Get the very next reserve word.
+		var reserve_words = ['#each', '#if', '#else', '/each', '/if'];
+		var reserve_word_types = {
+			'#each': 'block',
+			'#if': 'block',
+			'#else': 'block_terminus',
+			'/each': 'terminus',
+			'/if': 'terminus'
+		}
+
+		// Find the first occuring word, and pivot on it.
+		if (first = sutil.firstOccuring(reserve_words, segment)) {
+			var temp = sutil.splitOnce (segment, first);
+
+			if (!reserve_word_types[first]) {
+				throw new Error('Lexical Analysis for term "' + first + '" failed.');
+			}
+
+			return {
+				type: reserve_word_types[first], 
+				word: first,
+				segment: temp[1] ? temp[1] : '' 
+			}			
+		}
+		
+		return false;
+	}
+
+
+	function parseNextSegment (segment, delimeter_left, delimeter_right) {
+
+		// Get everything up to our opening paren, and add to complete.
+		// If no seperator is found, we're done.
+		var temp = sutil.splitOnce(segment,delimeter_left);				
+		
+		var left = temp[0],
+			segment = '',
+			right = (temp[1]) ? temp[1] : '';
+
+		// If we found a start, right should be a block code segment.
+		// Split again by end delimeter.
+		if (right.length > 0) {
+			// Get everything up to our first closing paren,
+			// and make it our current_segment.
+			// Add remainder as the remaining right.
+			temp = sutil.splitOnce(right,delimeter_right);
+			current_segment = temp[0];
+			right = (temp[1]) ? temp[1] : '';
+		}
+
+		return {
+			left: left,
+			segment: segment,
+			right: right
+		};
+	}
+
+
+	/**
 	 * Callback for first pass of parsing templates. 
 	 *
 	 * This function should be passed the complete set of {{ }} code in templates,
@@ -182,7 +364,7 @@ const BISTRO_FAILURE = '__FAILURE';
 		//   
 		var function_list = {
 			each: reserveWord_each,
-			if: reserveWord_if,  
+			if: reserveWord_if,
 			else: '',  
 			switch: '',  
 			case: '',  

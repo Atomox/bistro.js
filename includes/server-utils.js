@@ -29,6 +29,38 @@ var server_utils = (function utils() {
 
 
 	/**
+	 * Find the first occuring needle, and return it.
+	 * 
+	 * @param  {array(strings)} needles
+	 *   One or more competing needles.
+	 * @param  {string} haystack
+	 * 
+	 * @return {string}
+	 *   The first occuring needle.
+	 */
+	function firstOccuring(needles, haystack) {
+		var champion = {
+			pos: -1,
+			name: ''
+		}
+
+		// Enforce an array.
+		if (typeof needles !== 'object') { needles = [needles]; }
+
+		// Find our champion.
+		for (var i = 0; i < needles.length; i++) {
+			var tmp = str.indexOf(needles[i]);
+			if (champion.pos < 0 || (tmp < champion.pos && tmp >= 0)) { 
+				champion.pos = tmp;
+				champion.name = needles[i]; 
+			}
+		}
+
+		return champion.name;
+	}
+
+
+	/**
 	 * Split a string into 2 pieces, left of first delimeter, and right of first delimeter.
 	 * 
 	 * @param  {string} str

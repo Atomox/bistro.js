@@ -24,6 +24,55 @@ var tree = (function treeFactory() {
 
 
     /**
+     * Initialize unique counters, which we concat with their prefix
+     * to make unique node names for our tree.
+     * 
+     * @param  {string} prefix
+     *   An optional prefix to namespace our counter.
+     * 
+     * @return {string}
+     *   A unique name to be used for a node.
+     */
+    Tree.prototype.getNextUniqueId = function getNextUniqueId(prefix) {
+        if (!prefix) { prefix = 'node'; }
+
+        // If one does not exist, intialize it. Otherwise, incriment it.
+        if (!this.counter[prefix]) { this.counter[prefix] = 0; }
+        else { this.counter[prefix]++; }
+
+        return prefix + this.counter[prefix];
+    }
+
+
+    /**
+     * Find a tree node by it's ID, and return it.
+     * 
+     * @param {string} id
+     *   The ID of a node we're searching for.
+     * 
+     * @return {node|false}
+     *   The complete node with the passed id, or FALSE if not found.
+     */
+    Tree.prototype.getNode = function getNode(id, parent) {
+        // Start with a node, and look at all children. 
+        var current = (parent !== null) ? parent : this.getRoot();
+        
+        // Is this your node?
+        if (current.id === id) {
+            return current;
+        }
+        // Recurse.
+        else if (current.children) {
+            for (var i = 0; i < current.children.length; i++) {
+                if (existingNode = getNode(id, current)) {
+                    return existingNode;
+                }
+            }
+        }
+    }
+
+
+    /**
      * Add a child node to the passed {parent}. If {parent} already has a child named {id},
      * we will return FALSE.
      * 
