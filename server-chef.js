@@ -33,6 +33,9 @@ const BISTRO_FAILURE = '__FAILURE';
 
 				// New way:
 				var parse_tree = parseTree(template);
+
+				parse_tree.dump();
+
 				var parsed_tpl = resolveParseTree(parse_tree, data);
 
 				resolve(parsed_tpl);
@@ -141,13 +144,13 @@ const BISTRO_FAILURE = '__FAILURE';
 	function parseTree (template) {
 		
 		var right = template,
-			tree = new parsetree.Tree('root', null),
+			tree = parsetree,
 			parents = new stack.Stack();
 
 			// Push the root element onto the array.
-			parents.push(tree.getRoot());
+			parents.push(tree.root());
 
-		while (right.length > 0) {
+		while (right && right.length > 0) {
 
 			// Get next segment. {{SOME_SEGMENT}}
 			var tmp = parseNextSegment (right, '{{', '}}');
@@ -163,21 +166,24 @@ const BISTRO_FAILURE = '__FAILURE';
 			right = (tmp.right.length > 0) ? tmp.right : null;
 
 			// Lexical analysis:
-			while (command = parseReserveWord(segment)) {
+			while (segment && segment.length > 0) {
 
-				if (command.term && command.type) {
+				var command = parseReserveWord(segment);
+
+				if (typeof command.word !== 'undefined' && typeof command.type !== 'undefined') {
 					var my_leaf = null;
+
 					switch(command.type) {
 						case 'block':
 							// Add the block_word to the tree, and the parent to the stack.
-							my_leaf = tree.add(command.word, parents.peek().id, parents.peek(), segment);
+							my_leaf = tree.add(command.word, parents.peek().id, parents.peek(), command.segment);
 							parents.push(my_leaf);							
 							break;
 					
 						case 'block_terminus':
 							// Pop the parent off, add this as a parent.
 							parents.pop();
-							my_leaf = tree.add(command.word, parents.peek().id, parents.peek(), segment);
+							my_leaf = tree.add(command.word, parents.peek().id, parents.peek(), command.segment);
 							parents.push(my_leaf);
 							break;
 
@@ -195,26 +201,20 @@ const BISTRO_FAILURE = '__FAILURE';
 							break;
 
 						case 'variable':
-							// add variable
-							/**
-							   @TODO
-							 */
-							break;
+						default:
+							console.warn('Could not parse command: ' + command.type);
 					}
 				}
+				else {
+					my_leaf = tree.add('expression', parents.peek().id, parents.peek(), segment);
+				}
 
-				/**
-				   @TODO
-
-				     As written, parseReserveWord does not return a remainder.
-				     This means only 1 reserve word per {}.
-
-				     Ultimately, we'll loop here.
-				 */
 				// Process the remainder.
-				segment = (command.remainder) ? command.remainder : null;
+				segment = (typeof command.remainder !== 'undefined') ? command.remainder : null;
 			}
 		}
+
+		return tree;
 	}
 
 
@@ -229,47 +229,131 @@ const BISTRO_FAILURE = '__FAILURE';
 	 *   The final template, translated into normal HTML.
 	 */
 	function resolveParseTree (tree, data) {
-		/**
-		 
-
-			@TODO
-
-			  Evaluate the tree.
-
-			  From left-to-right, do a depth-first evaluation.
-
-			  	- Keep track of the context of the data.
-
-		 */
+		return traverseParseTree(tree.root(), data);
 	}
 
+	function traverseParseTree (node, data, level) {
+ 
+        if (typeof node === 'undefined') {
+        	console.warn('Cannot resolve undefined parse tree.');
+        }
+        //
+        //   @todo
+        //     node instanceof
+        
+        if (!level) { level = 0; }
+        var children = node.children,
+            offset = Array(level+1).join(' '),
+            result = '';
+
+        if (node.data && node.data.data) {
+        	switch (node.data.type) {
+        		
+        		case 'expression':
+        			result += (node.data.data.length > 0) 
+						? parse(node.data.data, data, [
+							{
+								left: '[',
+								right: ']', 
+								callback: processCommandBlock
+							}
+						]) 
+						: '';
+					console.log('expression:', node.data.data);
+        			break;
+        		
+        		case '#if':
+        			if (evalConditional('if', node.data.data, data) === true) {
+        				console.log(node.data.data, 'evaluates to', 'true');
+        			}
+        			else {
+        				console.log(node.data.data, 'evaluates to', 'false');
+        				return result;
+        			}
+        			break;
+
+        		case 'constant':
+        			result += node.data.data;
+        	}
+        }
+
+
+
+
+        if (node.data && typeof node.data.type !== 'undefined' && node.data.type == '#each') {
+
+        	console.log(node.data.data, ' -> ', data[node.data.data], typeof data[node.data.data]);
+
+        	if (typeof data[node.data.data] === 'object') {
+        		for (var i = 0; i < data[node.data.data].length; i++) {
+			        for (var j = 0; j < children.length; j++) {
+			            if (children[j]) {
+			               result += traverseParseTree(children[j], data[node.data.data][i], (level+1));
+			            }
+			            else {
+			            	result += 'No children';
+			            }
+			        }        			
+        		}
+        	}
+        }
+        else {
+	        for (var j = 0; j < children.length; j++) {
+	            if (children[j]) {
+	               result += traverseParseTree(children[j], data, (level+1));
+	            }
+	        }
+        }
+
+		return result;
+	}
 
 
 	function parseReserveWord (segment) {
 
-		// Get the very next reserve word.
-		var reserve_words = ['#each', '#if', '#else', '/each', '/if'];
-		var reserve_word_types = {
-			'#each': 'block',
-			'#if': 'block',
-			'#else': 'block_terminus',
-			'/each': 'terminus',
-			'/if': 'terminus'
-		}
-
-		// Find the first occuring word, and pivot on it.
-		if (first = sutil.firstOccuring(reserve_words, segment)) {
-			var temp = sutil.splitOnce (segment, first);
-
-			if (!reserve_word_types[first]) {
-				throw new Error('Lexical Analysis for term "' + first + '" failed.');
+		if (segment && segment.length > 0) {
+			// Get the very next reserve word.
+			var reserve_words = ['#each', '#if', '#else', '/each', '/if'];
+			var reserve_word_types = {
+				'#each': 'block',
+				'#if': 'block',
+				'#else': 'block_terminus',
+				'/each': 'terminus',
+				'/if': 'terminus'
 			}
+			var remainder = '';
 
-			return {
-				type: reserve_word_types[first], 
-				word: first,
-				segment: temp[1] ? temp[1] : '' 
-			}			
+			// Find the first occuring word, and pivot on it.
+			if (first = sutil.firstOccuring(reserve_words, segment)) {
+
+				var temp = sutil.splitOnce (segment, first);
+
+				if (!reserve_word_types[first]) {
+					throw new Error('Lexical Analysis for term "' + first + '" failed.');
+				}
+
+				// Segment is the remaining segment (after first).
+				segment = temp[1] ? temp[1] : '';
+
+				// Check for any remainder, with possible terms. Chop off anything
+				// starting with a second reserve word, and do not include as segment for first.
+				// Instead, pass back as a remainder, so we can continue parsing commands,
+				// one at a time.
+				if (segment.length > 0) {
+					if (second = sutil.firstOccuring(reserve_words, segment)) {
+						var temp2 = sutil.splitOnce (segment, second);
+						segment = temp2[0];
+						remainder = temp2[1] ? second + temp2[1] : second + '';
+					}
+				}
+
+				return {
+					type: reserve_word_types[first], 
+					word: first,
+					segment: segment.trim(),
+					remainder: remainder
+				}			
+			}
 		}
 		
 		return false;
@@ -293,7 +377,7 @@ const BISTRO_FAILURE = '__FAILURE';
 			// and make it our current_segment.
 			// Add remainder as the remaining right.
 			temp = sutil.splitOnce(right,delimeter_right);
-			current_segment = temp[0];
+			segment = temp[0];
 			right = (temp[1]) ? temp[1] : '';
 		}
 
@@ -393,6 +477,39 @@ const BISTRO_FAILURE = '__FAILURE';
 		return '<<<<<' + segment + '>>>>>';
 	}
 
+
+	/**
+	 * Evaluate a conditional.
+	 * 
+	 * @param  {string} type
+	 *   Conditional type. Defaults to if.
+	 * @param  {string} expression
+	 *   The expression of the conditional.
+	 * @param  {variable} data
+	 *   The scope of variables passed to this level of the function.
+	 * 
+	 * @return {boolean}
+	 *   TRUE if it evaluates to true.
+	 */
+	function evalConditional(type, expression, data) {
+
+		// expression
+		if (/^[a-z0-9]+$/i.test(expression) && typeof data[expression] !== 'undefined' && data[expression]) {
+			return true;
+		}
+		
+		// expression === true
+		
+		// expression === constant
+		
+
+		/**
+		   
+		   @TODO
+
+		 */
+		return false;
+	}
 
 	function reserveWord_each(args, vars) {
 		addScope('each', args, vars);

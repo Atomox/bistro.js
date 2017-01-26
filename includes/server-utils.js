@@ -39,6 +39,16 @@ var server_utils = (function utils() {
 	 *   The first occuring needle.
 	 */
 	function firstOccuring(needles, haystack) {
+
+		if (typeof needles === 'undefined' || needles == null) {
+			console.warn('Attempting to search a haystack for an empty needle.');
+			return false;
+		}
+		else if (typeof haystack === 'undefined' || haystack == null) {
+			console.warn('Attempting to search an empty haystack for a needle.');
+			return false;
+		}
+
 		var champion = {
 			pos: -1,
 			name: ''
@@ -49,8 +59,11 @@ var server_utils = (function utils() {
 
 		// Find our champion.
 		for (var i = 0; i < needles.length; i++) {
-			var tmp = str.indexOf(needles[i]);
-			if (champion.pos < 0 || (tmp < champion.pos && tmp >= 0)) { 
+			var tmp = haystack.indexOf(needles[i]);
+			if (tmp < 0) {
+				continue;
+			}
+			else if (champion.pos === -1 || tmp < champion.pos && tmp >= 0) { 
 				champion.pos = tmp;
 				champion.name = needles[i]; 
 			}
@@ -174,12 +187,14 @@ var server_utils = (function utils() {
 	return {
 		hash: hashCode,
 		module_require: moduleRequire,
-		splitOnce: splitOnce
+		splitOnce: splitOnce,
+		firstOccuring: firstOccuring
 	};
 })();
 
 module.exports = {
 	hash: server_utils.hash,
 	splitOnce: server_utils.splitOnce,
+	firstOccuring: server_utils.firstOccuring,
 	module_require: server_utils.module_require
 };

@@ -13,7 +13,7 @@ var stack = (function stackFactory() {
     }
 
     /** Stack Operations. */
-    Stack.prototype.push = function pushStack() { this.stack.push(); }
+    Stack.prototype.push = function pushStack(item) { this.stack.push(item); }
     Stack.prototype.pop = function popStack() { return this.stack.pop(); }
     Stack.prototype.peek = function peekStack() { return this.stack[this.stack.length-1]; } 
 

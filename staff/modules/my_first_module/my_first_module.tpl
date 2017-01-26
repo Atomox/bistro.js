@@ -11,11 +11,18 @@
 			{{ 
 			#if people
 				#each people }}
-					<li> {{ [first|string] [last|string] }} </li>
-				{{ 
+					{{ #if first }}
+						<li> {{ [first|string] [last|string] }} </li>
+					{{ /if
 				/each
 			/if
 			}}
+		</div>
+		<div class="Others">
+		{{ #if others }}
+			{{ #each others }}
+			{{ /each }}
+		{{ /if }}
 		</div>
 	</body>
 </html>

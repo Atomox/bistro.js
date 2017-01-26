@@ -16,6 +16,7 @@ var tree = (function treeFactory() {
         }
         var node = new Node(id, data);
         this._root = node;
+        this.counter = {};
     }
 
     Tree.prototype.getRoot = function() {
@@ -37,7 +38,7 @@ var tree = (function treeFactory() {
         if (!prefix) { prefix = 'node'; }
 
         // If one does not exist, intialize it. Otherwise, incriment it.
-        if (!this.counter[prefix]) { this.counter[prefix] = 0; }
+        if (typeof this.counter[prefix] === 'undefined') { this.counter[prefix] = 0; }
         else { this.counter[prefix]++; }
 
         return prefix + this.counter[prefix];
@@ -158,6 +159,24 @@ var tree = (function treeFactory() {
         return false;
     }
 
+
+    Tree.prototype.dump = function dumpNodeFamily(node, level) {
+        // Get the root.
+        if (typeof node === 'undefined' || node == null) { node = this.getRoot(); }
+        if (!level) { level = 0; }
+        var children = node.children;
+
+        var offset = Array(level+1).join(' ');
+
+        console.log(offset, node.id + ': ', node.data);
+        console.log(offset, '......');
+
+        for (var i = 0; i < children.length; i++) {
+            if (children[i]) {
+               dumpNodeFamily(children[i], (level+1));
+            }
+        }
+    }
 
     return {
         Tree: Tree
