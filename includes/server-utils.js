@@ -5,6 +5,8 @@
 var payroll = payroll || require('../server-payroll');
 var path = path || require('path');
 
+const BISTRO_FAILURE = '__FAILURE';
+
 var server_utils = (function utils() {
 
 	/**
@@ -137,6 +139,52 @@ var server_utils = (function utils() {
 
 
 	/**
+	 * Given an object, and a path like foo.bar.baz,
+	 * get the value stored in obj at the passed path.
+	 *
+	 * @param  {needle} needle
+	 *   The path we're searching for in haystack.
+	 * @param  {object} haystack
+	 *   The object where we should evaluate/search for our needle (path).
+	 * 
+	 * @return {mixed|FAILURE}
+	 *   THe value at haystack.needle, or BISTRO_FAILURE on fail.
+	 */
+	function getObjectPath(needle, haystack) {
+		
+		try {
+			if (typeof haystack !== 'object') {
+				throw new Error('Type object expected for haystack.');
+			}
+
+			// Copy, so we don't modify any objects passed by reference.
+			var my_obj = haystack;
+			needle = needle.split('.');
+
+			if (typeof needle !== 'object') {
+				throw new Error('Could not split ' + needle + ' into expected parts.');
+			}
+
+			for (var i = 0; i < needle.length; i++) {
+				if (my_obj[needle[i]]) {
+					my_obj = my_obj[needle[i]];
+				}
+				else {
+					throw new Error('Path ' + needle[i] + ' does not exist');
+				}
+			}
+
+			return my_obj;
+		}
+		catch (e) {
+			console.warn('Error resolving getObjectPath. ', e);
+		}
+
+		return BISTRO_FAILURE;
+	}
+
+
+	/**
 	 * Require and return a module, if it exists.
 	 * 
 	 * @param {string} module_name
@@ -188,7 +236,8 @@ var server_utils = (function utils() {
 		hash: hashCode,
 		module_require: moduleRequire,
 		splitOnce: splitOnce,
-		firstOccuring: firstOccuring
+		firstOccuring: firstOccuring,
+		getObjectPath: getObjectPath
 	};
 })();
 
@@ -196,5 +245,6 @@ module.exports = {
 	hash: server_utils.hash,
 	splitOnce: server_utils.splitOnce,
 	firstOccuring: server_utils.firstOccuring,
-	module_require: server_utils.module_require
+	module_require: server_utils.module_require,
+	getObjectPath: server_utils.getObjectPath
 };

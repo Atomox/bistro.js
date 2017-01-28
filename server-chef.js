@@ -23,18 +23,11 @@ const BISTRO_FAILURE = '__FAILURE';
 		return new Promise(function (resolve, reject) {
 			try {
 
-				// Old way:
-				/**
-				var parsed_tpl = parse(template, data, [
-						{left: '{{', right: '}}', callback: processControlBlock}
-					]
-				);
-				*/
-
-				// New way:
+				// Convert the template to a tree structure.
 				var parse_tree = parseTree(template);
 
-				parse_tree.dump();
+				// Debugger
+//				parse_tree.dump();
 
 				var parsed_tpl = resolveParseTree(parse_tree, data);
 
@@ -44,96 +37,6 @@ const BISTRO_FAILURE = '__FAILURE';
 				reject(Error);	
 			}
 		});
-	}
-
-
-	/**
-	 * Parse a given string for blocks of code to pass to a callback for evaluation.
-	 * 
-	 * @param  {string} template
-	 *   A string of data we should parse.
-	 * @param  {Object} vars
-	 *   A set of data we should pass to the callback for contextual evaluating of any matched blocks.
-	 * @param {array(object)} delim_lft_rt_callback
-	 *   An array of 1 or more objects with three attributes:
-	 *   | @param  {string} delimeter_left
-	 *   |   A delimeter denoting the start of a code block.
-	 *   | @param  {string} delimeter_right
-	 *   |   A delimeter denoting the end of a code block.
-	 *   | @param  {[type]} callback
-	 *   |   A callback function we should pass any blocks we find to. Should expect (string, vars),
-	 *   |   and replace any control blocks with evaluated strings.
-	 * 
-	 * @return {string}
-	 *   The template, with all blocks evaluated.
-	 */
-	function parse (template, vars, delim_lft_rt_callback) {
-
-		// Initialize scope stacks.
-		initializeScope(vars);
-
-		console.log('Parsing template with delimeters: ');
-		console.log(delim_lft_rt_callback);
-
-		var left = '',
-			right = template,
-			current_segment = null,
-			blockProcessCallback = null;
-
-		// Process the template until it's been consumed, and no outstanding segments remain.
-		while (right.length > 0 || current_segment !== null) {
-
-			// Process any outstanding segments.
-			if (current_segment !== null) {
-				current_segment = blockProcessCallback(current_segment,vars);
-				left += (typeof current_segment == 'string') ? current_segment : '';
-				current_segment = null;
-			}
-			// If no current segment, look for next one.
-			else {
-				
-				var first = null, tmp_l = null, tmp_r = null,
-					tmp_callback = null, last_delimeter_right = null;
-
-				// In case we have multiple delimeter pairs,
-				// look for whichever occurs first, and use that one.
-				for (var z = 0; z < delim_lft_rt_callback.length; z++) {
-					var zObj = delim_lft_rt_callback[z];
-
-					console.log('Looping.... ' + z);
-					console.log(zObj);
-
-					// Get everything up to our opening paren, and add to complete.
-					// If no seperator is found, we're done.
-					var temp = sutil.splitOnce(right,zObj.left);				
-					
-					if (tmp_l === null || temp[0].length < tmp_l.length) {
-						tmp_l = temp[0];
-						tmp_r = (temp[1]) ? temp[1] : '';
-						blockProcessCallback = zObj.callback;
-						last_delimeter_right = zObj.right;
-					}
-				}
-
-				left += tmp_l;
-				right = tmp_r;
-
-
-
-				// If we found a start, right should be a block code segment.
-				// Split again by end delimeter.
-				if (right.length > 0) {
-					// Get everything up to our first closing paren,
-					// and make it our current_segment.
-					// Add remainder as the remaining right.
-					temp = sutil.splitOnce(right,last_delimeter_right);
-					current_segment = temp[0];
-					right = (temp[1]) ? temp[1] : '';
-				}
-			}
-		}
-
-		return left;
 	}
 
 
@@ -219,6 +122,7 @@ const BISTRO_FAILURE = '__FAILURE';
 
 
 	/**
+	 * Convert a parse tree into it's final template form.
 	 *
 	 * @param  {Tree} tree
 	 *   A parse tree, ready for contextual evaluation.
@@ -231,6 +135,7 @@ const BISTRO_FAILURE = '__FAILURE';
 	function resolveParseTree (tree, data) {
 		return traverseParseTree(tree.root(), data);
 	}
+
 
 	function traverseParseTree (node, data, level) {
  
@@ -255,7 +160,7 @@ const BISTRO_FAILURE = '__FAILURE';
 							{
 								left: '[',
 								right: ']', 
-								callback: processCommandBlock
+								callback: evalCommandBlock
 							}
 						]) 
 						: '';
@@ -390,91 +295,117 @@ const BISTRO_FAILURE = '__FAILURE';
 
 
 	/**
-	 * Callback for first pass of parsing templates. 
-	 *
-	 * This function should be passed the complete set of {{ }} code in templates,
-	 * minus the wrapping Control Block delimeters.
-	 *
-	 * These control blocks are the scripts we should evaluate. There can be multiple commands within this block.
+	 * Parse a given string for blocks of code to pass to a callback for evaluation.
 	 * 
-	 * @param  {string} segment
-	 *   A string of code which we should parse for commands.
+	 * @param  {string} template
+	 *   A string of data we should parse.
 	 * @param  {Object} vars
-	 *   An object containing all vars tis template might reference.
-	 *   
+	 *   A set of data we should pass to the callback for contextual evaluating of any matched blocks.
+	 * @param {array(object)} delim_lft_rt_callback
+	 *   An array of 1 or more objects with three attributes:
+	 *   | @param  {string} delimeter_left
+	 *   |   A delimeter denoting the start of a code block.
+	 *   | @param  {string} delimeter_right
+	 *   |   A delimeter denoting the end of a code block.
+	 *   | @param  {[type]} callback
+	 *   |   A callback function we should pass any blocks we find to. Should expect (string, vars),
+	 *   |   and replace any control blocks with evaluated strings.
+	 * 
 	 * @return {string}
-	 *   The segment, with all commands parsed and evaluated.
+	 *   The template, with all blocks evaluated.
 	 */
-	function processControlBlock (segment, vars) {
+	function parse (template, vars, delim_lft_rt_callback) {
 
-		console.log(' <<< Process Control Block >>> ');
-		console.log(vars);
-		console.log(segment);
-		
-		return (segment.length > 0) 
-			? parse(segment, vars, [
-					{
-						left: '[',
-						right: ']', 
-						callback: processCommandBlock
-					},
-					{
-						left: '#', 
-						right: "\n",
-						callback: processReserveWords
+		var left = '',
+			right = template,
+			current_segment = null,
+			blockProcessCallback = null;
+
+		// Process the template until it's been consumed, and no outstanding segments remain.
+		while (right.length > 0 || current_segment !== null) {
+
+			// Process any outstanding segments.
+			if (current_segment !== null) {
+				current_segment = blockProcessCallback(current_segment,vars);
+				left += (typeof current_segment == 'string') ? current_segment : '';
+				current_segment = null;
+			}
+			// If no current segment, look for next one.
+			else {
+				
+				var first = null, tmp_l = null, tmp_r = null,
+					tmp_callback = null, last_delimeter_right = null;
+
+				// In case we have multiple delimeter pairs,
+				// look for whichever occurs first, and use that one.
+				for (var z = 0; z < delim_lft_rt_callback.length; z++) {
+					var zObj = delim_lft_rt_callback[z];
+
+					// Get everything up to our opening paren, and add to complete.
+					// If no seperator is found, we're done.
+					var temp = sutil.splitOnce(right,zObj.left);				
+					
+					if (tmp_l === null || temp[0].length < tmp_l.length) {
+						tmp_l = temp[0];
+						tmp_r = (temp[1]) ? temp[1] : '';
+						blockProcessCallback = zObj.callback;
+						last_delimeter_right = zObj.right;
 					}
-					// @TODO
-					//   How do we detect closing tags, like /if?
-				]) 
-			: '';
+				}
+
+				left += tmp_l;
+				right = tmp_r;
+
+				// If we found a start, right should be a block code segment.
+				// Split again by end delimeter.
+				if (right.length > 0) {
+					// Get everything up to our first closing paren,
+					// and make it our current_segment.
+					// Add remainder as the remaining right.
+					temp = sutil.splitOnce(right,last_delimeter_right);
+					current_segment = temp[0];
+					right = (temp[1]) ? temp[1] : '';
+				}
+			}
+		}
+
+		return left;
 	}
 
 
-	function processReserveWords (segment, vars) {
+	/**
+	 * Given an exression in a template passed as part of a reserve word,
+	 * normalize the value, so it maybe be properly evaluated.
+	 * 
+	 * @param  {string} exp
+	 *   Some expression in string form, like foo.bar, 123, or true.
+	 * @param  {obj} data
+	 *   The context data where we can featch any data to evaluate this expression.
+	 * 
+	 * @return {mixed|Failure}
+	 *   The normalized value, or failure.
+	 */
+	function normalizeExpression(exp, data) {
 
-		console.log(' <<< Process Reserve Words >>> ');
-		console.log(vars);
-		console.log(segment);
+		var regex_path = /^([a-z][_\-a-z0-9]+)\.(([a-z][_\-a-z0-9]+)\.?)+$/i,
+		    regex_num = /^[\-0-9]+[.]?[0-9]*$/;
 
-		// Parse for block functions. These should be the very first words in the segment,
-		// since detecting a # is what got us here.
-		// 
-		// I.E. 
-		//   #each people AS key => value
-		//   
-		//   Would be passed as:
-		//   
-		//   each people AS key => value
-		//   
-		var function_list = {
-			each: reserveWord_each,
-			if: reserveWord_if,
-			else: '',  
-			switch: '',  
-			case: '',  
-			break: '',  
-			var: ''
-		};
+		if (typeof exp === 'string') {
+			exp = exp.trim();
 
-		// Split by the first word.
-		var temp = sutil.splitOnce(segment, ' ');
-
-		var reserve = temp[0],
-			args = (temp[1]) ? temp[1] : null;
-
-		if (function_list[reserve]) {
-			segment = function_list[reserve](args, vars);
-		}
-		else {
-			throw new Error('Could not eval: ' + segment);
+			if (exp == 'true') { exp = true; }
+			else if (exp == 'false') { exp = false; }
+			else if (regex_num.test(exp)) { exp = Number(exp); }
+			else if (typeof data !== 'object') { console.warn('Expression appears to depend upon data, Expected as object, but found', typeof data, '.'); }
+			else if (obj_path = exp.match(regex_path)) { exp = sutil.getObjectPath(exp, data); }
+			else if (data[exp]) { exp = data[exp]; }
+			else { 
+				console.warn('Expression ' + exp + ' could not be evaluated.');
+				exp = BISTRO_FAILURE;
+			}
 		}
 
-		/**
-		 * @todo 
-		 *   if loop, add a map from param to subparams.
-		 */
-		
-		return '<<<<<' + segment + '>>>>>';
+		return exp;
 	}
 
 
@@ -493,44 +424,49 @@ const BISTRO_FAILURE = '__FAILURE';
 	 */
 	function evalConditional(type, expression, data) {
 
-		// expression
-		if (/^[a-z0-9]+$/i.test(expression) && typeof data[expression] !== 'undefined' && data[expression]) {
-			return true;
+		try {
+			// Trim whitespace before passing the regex.
+			expression = expression.trim();
+
+			// Check for a single variable expression referencing the current base level of data.
+			if (/^([a-z0-9_\-\.]+)+$/i.test(expression)) {
+				var singleExp = normalizeExpression(expression, data);
+				return (singleExp && singleExp !== BISTRO_FAILURE) ? true : false;
+			}
+			// Otherwise, we're dealing with something more complex.
+			else if (exp = expression.match(/^([a-z0-9_\-\.]+)[\s]?(>=|<|>|==|!=)[\s]?([a-z0-9_\-\.]+)$/i)) {
+				if (Array.isArray(exp) === false) {
+					throw new Error('Expression does not eval.');
+				}
+				else {
+					var op = (exp[2]) ? exp[2] : null,
+						left = normalizeExpression(exp[1], data),
+						right = normalizeExpression(exp[3], data); 
+
+					if (left === BISTRO_FAILURE || right === BISTRO_FAILURE) {
+						throw new Error('One or more vars in expression had errors.');
+					}
+
+					switch (op) {
+
+						case '==': return left == right; break;
+						case '>': return left > right; break;
+						case '>=': return left >= right; break;
+						case '<': return left < right; break;
+						case '<=': return left <= right; break;
+						case '!=': return left != right; break;
+
+						default:
+							throw new Error('Expression op could not be resolved.');
+					}
+				}
+			}
 		}
-		
-		// expression === true
-		
-		// expression === constant
-		
-
-		/**
-		   
-		   @TODO
-
-		 */
-		return false;
-	}
-
-	function reserveWord_each(args, vars) {
-		addScope('each', args, vars);
-		return '<<<< foreach(' + args + ') >>>>';
-	}
-
-	function reserveWord_if(args, vars) {
-
-		/**
-		   @TODO
-		     Split args, and eval one at a time.
-		 */
-		var var_value = evalScope(args, vars);
-		if (var_value !== BISTRO_FAILURE && var_value) {
-			return 'if(true)';
+		catch (e) {
+			console.warn('One or more errors occured while parsing expression. ', e, ' Passed expression: ', expression);
 		}
-
-		return '<<<< if (true === false) >>>>';
+		return BISTRO_FAILURE;
 	}
-
-
 
 
 	/**
@@ -547,11 +483,7 @@ const BISTRO_FAILURE = '__FAILURE';
 	 * @return {string}
 	 *   The segment, with the command evaluated.
 	 */
-	function processCommandBlock (segment, vars) {
-
-		console.log(' <<< Process Command Block >>> ');
-		console.log(vars);
-		console.log(segment);
+	function evalCommandBlock (segment, vars) {
 
 		// This should be either a function or a pattern...
 		var params = segment.split('|');
@@ -565,8 +497,7 @@ const BISTRO_FAILURE = '__FAILURE';
 				case 'array':
 				case 'list':
 				case 'string':
-
-					var var_value = evalScope(params[0], vars);
+					var var_value = normalizeExpression(params[0], vars);
 					if (var_value !== BISTRO_FAILURE) {
 						maps_to = var_value;
 					}
@@ -585,129 +516,9 @@ const BISTRO_FAILURE = '__FAILURE';
 					break;
 			}
 		}
+
 		return maps_to;
 	}
-
-
-	/**
-	 * Initialize scope storrage within our current vars object.
-	 * This should be done before any parsing or object resolution is run.
-	 * 
-	 * @param {object} vars
-	 *   (PASSED BY REFERENCE) The vars object being passed around,
-	 *   where we store not only variables but scope.
-	 */
-	function initializeScope(vars) {
-
-		if (!vars['__scope']) {
-			vars['__scope'] = {
-				each: []
-			};
-		}
-		if (!vars['__stack']) {
-			vars['__stack'] = {
-			
-/**
- * if
- *   each 
- *   	if
- *   		each
- *     			if
- *     			/if
- *        	/each
- *      /if
- *      else
- *      	each
- *       		if
- *
- * 				elseif
- *     				each
- * 				else
- *
- * 				/if
- * 			/each
- * 		/if
- *   /each
- * /if
- *
- * stack:
- * 1.	  if => data => ''
- *
- * 2.	  each => data => ''
- * 	  
- * 
- */
-
-
-			}
-		}
-	}
-
-
-	/**
-	 * Push a scope variable reference to the scope stack.
-	 * 
-	 * @param {string} op
-	 *   The reserve word defining the scope.
-	 * @param {string} context_var
-	 *   The string name in context.
-	 * @param {object} vars
-	 *   (PASSED BY REFERENCE) The vars object being passed around,
-	 *   where we store not only variables but scope.
-	 */
-	function addScope(op, context_var, vars) {
-		vars['__scope'][op].push(context_var.trim());
-	}
-
-
-	/**
-	 * Given a variable name, determine the value based upon the currently defined scope.
-	 * 
-	 * @param  {[type]} val  [description]
-	 * @param {object} vars
-	 *   (PASSED BY REFERENCE) The vars object being passed around,
-	 *   where we store not only variables but scope.
-	 *   
-	 * @return {[type]}      [description]
-	 */
-	function evalScope(val, vars) {
-
-		console.log('');
-		console.log(' -> Eval scope for: ' + val);
-
-
-		// Check the current scope for relevant context.
-		// In scope, this value is probably attached to a parent element.
-		// 
-		//   E.G. __scope.each.0.people might have .name, so when .name is requested,
-		//   look through the scope for any objects with .name as a child.
-		if (vars['__scope']['each']) {
-
-
-			console.log(' -> Eval scope in each...');
-
-
-			for (var i = vars['__scope']['each'].length - 1; i >= 0; i--) {
-				var tmp = vars['__scope']['each'][i];
-
-				console.log('   -> Eval scope in each: ' + i);
-				console.log(vars[tmp]);
-
-				if (vars[tmp] && typeof vars[tmp] === 'object' && vars[tmp][0][val]) {
-					console.log('Found ' + val + ' in scope...');
-					return vars[tmp][0][val];
-				}
-			}
-		}
-
-		// Simple, base scope reference.
-		if (vars[val]) {
-			return vars[val];
-		}
-
-		return BISTRO_FAILURE;
-	}
-
 	
 	return {
 		processTemplate: processTemplate

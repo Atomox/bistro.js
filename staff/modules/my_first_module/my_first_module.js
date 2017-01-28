@@ -82,14 +82,21 @@ var myFirstModule = (function (){
 		return new Promise(
 			function(resolve, reject) {
 				resolve({
-					message: "Hi Dad Soup",
+					message: {
+						title: "Hi Dad Soup"
+					},
 					body: "ERAUQS SI DLRO WEHT",
 					people: [
 						{first: 'Alan', last: 'Alda'},
 						{first: 'Ben', last: 'Bova'},
 						{first: 'Carl', last: 'Sagan'},
 						{first: 'Denis', last: 'Hopper'}
-					]
+					],
+					foo: {
+						bar: {
+							baz: 123
+						}
+					}
 				});
 			}
 		);
