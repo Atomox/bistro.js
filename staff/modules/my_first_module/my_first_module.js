@@ -87,10 +87,10 @@ var myFirstModule = (function (){
 					},
 					body: "ERAUQS SI DLRO WEHT",
 					people: [
-						{first: 'Alan', last: 'Alda'},
-						{first: 'Ben', last: 'Bova'},
+						{first: 'Alan', last: 'Alda', salary: 123456},
+						{first: 'Ben', last: 'Bova', salary: 234.56},
 						{first: 'Carl', last: 'Sagan'},
-						{first: 'Denis', last: 'Hopper'}
+						{first: 'Denis', last: 'Hopper', salary: 4223.1}
 					],
 					foo: {
 						bar: {

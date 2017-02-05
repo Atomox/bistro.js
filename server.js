@@ -41,7 +41,7 @@ X   4. - On startup, build a hash map of all subdirectories,
 
 	5. - 
 
-	6. - Build a templating layer.
+x	6. - Build a templating layer.
 
  */
 

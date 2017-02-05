@@ -1,4 +1,4 @@
-var tree = tree || require('./server-tree');
+var tree = tree || require('bistro.js.tree');
 
 var internalPaths = (function pathFactory() {
 
