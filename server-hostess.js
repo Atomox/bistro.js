@@ -9,7 +9,7 @@ var sutil = require('./includes/server-utils'),
  */
 	payroll = payroll || require('./server-payroll'),
 	paths = paths || require('./includes/server-paths.js'),
-    chef = chef || require('./server-chef.js');
+    prepcook = prepcook || require('prepcook.js');
 
 
 
@@ -188,10 +188,14 @@ var hostess = (function hostessFactory() {
 								var tpl = module_data[1];
 
 								// Evaluate the template, and output it.
-								var processed_template = chef.processTemplate(mod_data, tpl);								
+								var processed_template = prepcook.processTemplate(mod_data, tpl);								
 								var output_template = processed_template
 									.then(function (parsed_tpl) {
 										response.write(parsed_tpl);
+										console.log('Final response:', parsed_tpl);
+									})
+									.catch(function (err){
+										console.log('An error occured in ' + e.fileName + ' on line ' + e.lineNumber + ' during template parsing.', err);
 									});
 
 								calls = calls.concat([processed_template, output_template]);

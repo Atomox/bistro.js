@@ -16,6 +16,13 @@ var myFirstModule = (function (){
 			template: 'staff/modules/my_first_module/my_first_module.tpl',
 		},
 		{
+			path: 'second',
+			title: 'My First Module',
+			access: 'access content',
+			callback: general_content_callback,
+			template: 'staff/modules/my_first_module/my_second_module.tpl',
+		},
+		{
 			path: 'content/*',
 			id: 1,
 			title: 'General Content',
@@ -82,8 +89,21 @@ var myFirstModule = (function (){
 		return new Promise(
 			function(resolve, reject) {
 				resolve({
-					message: "Hi Dad Soup",
-					body: "ERAUQS SI DLRO WEHT"
+					message: {
+						title: "Hi Dad Soup"
+					},
+					body: "ERAUQS SI DLRO WEHT",
+					people: [
+						{first: 'Alan', last: 'Alda', salary: 123456},
+						{first: 'Ben', last: 'Bova', salary: 234.56},
+						{first: 'Carl', last: 'Sagan'},
+						{first: 'Denis', last: 'Hopper', salary: 4223.1}
+					],
+					foo: {
+						bar: {
+							baz: 123
+						}
+					}
 				});
 			}
 		);
