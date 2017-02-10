@@ -195,7 +195,7 @@ var hostess = (function hostessFactory() {
 										console.log('Final response:', parsed_tpl);
 									})
 									.catch(function (err){
-										console.log('An error occured during template parsing.', err);
+										console.log('An error occured in ' + e.fileName + ' on line ' + e.lineNumber + ' during template parsing.', err);
 									});
 
 								calls = calls.concat([processed_template, output_template]);

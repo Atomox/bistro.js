@@ -27,21 +27,7 @@ X		 - Flesh out MySQL DB layer. Understand
 			@see http://docs.sequelizejs.com/
 
 
-
-X   3. - Routing: Let's serve pages in a directory structure!
-
-X      - Hook_menu?
-
-X	   - Prepare to handle internal paths (assembling content from content types).
-
-	   - Find a way to declare and pass globals to modules.
-
-X   4. - On startup, build a hash map of all subdirectories,
-		 to make file checking faster when serving virtual paths.
-
-	5. - 
-
-x	6. - Build a templating layer.
+    3. - Routing: - Find a way to declare and pass globals to modules.
 
  */
 

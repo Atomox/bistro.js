@@ -34,8 +34,13 @@
 
 		{{ #if others }} The others are real. {{ /if }}
 		{{ #if others == true  [others|string]  /if }}
-		{{ #if others == people }} Others is People {{ /if }}
-		{{ #if others != people }} {{ ['OTHERS ARE not people.'|lowercase] }} {{ /if }}	
+		
+		{{ #if others == people }} 
+			Others is People
+		{{ /if }}
+		{{ #else }}
+			{{ ['OTHERS ARE not people.'|lowercase] }}
+		{{ /else }}	
 
 		{{ ['I AM LOWERCASE.'|lowercase] }}
 		{{ ['I AM upperCASE.'|uppercase] }}
