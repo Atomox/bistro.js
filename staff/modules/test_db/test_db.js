@@ -5,7 +5,6 @@ var myDbTestModule = (function (){
 	var paths = [
 		{
 			path: 'walkin/test',
-			id: null,
 			title: 'Database Test Sandbox',
 			access: 'access content',
 			callback: test_database_callback, 
@@ -13,10 +12,10 @@ var myDbTestModule = (function (){
 		},
 		{
 			path: 'walkin/test/content',
-			id: null,
 			title: 'Database Test Sandbox',
 			access: 'access content',
 			callback: test_database_content_callback, 
+			template: 'staff/modules/test_db/walkin_test.tpl',
 			type: 'normal'
 		},
 	];
@@ -26,7 +25,7 @@ var myDbTestModule = (function (){
 
 		var query = walkin.select('SELECT 1 + 1 AS two');
 
-		return query.then(function acceptDbResult(rows, fields){
+		return query.then(function acceptDbResult(rows, fields) {
 			console.log('We have results!');
 			console.log(' - - - - - - - - -');
 			console.log(fields);
@@ -43,7 +42,16 @@ var myDbTestModule = (function (){
 
 		// Process the results.
 		var handleResults = query.then(function acceptDbResult(rows, fields) {
-			console.log(rows);
+
+			return new Promise(function(resolve, reject) {
+
+				var results = {
+					title: 'Test the DB',
+					rows: rows
+				}	
+
+				resolve(results);
+			});
 		});
 
 		// Return the processing results promise,

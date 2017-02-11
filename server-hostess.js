@@ -176,9 +176,11 @@ var hostess = (function hostessFactory() {
 								   @TODO
 								     Process response.
 								 */
-
 								return modResp;
-							});
+							})
+							.catch(function(err) {
+								console.warn('Error retrieving data from path callback promise.', err);
+							}); 
 
 
 						// Process the template.
