@@ -22,8 +22,8 @@
   "homepage": "https://github.com/Atomox/bistro.js#readme",
   "dependencies": {
     "mysql": "^2.12.0",
-    "prepcook.js": "^0.1.1",
-    "bistro.js.tree": "^0.0.1"
+    "prepcook.js": "^0.3.0",
+    "bistro.js.tree": "^0.0.2"
   },
   "directories": {
     "includes": "includes",
