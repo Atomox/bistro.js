@@ -25,6 +25,9 @@
     "prepcook.js": "^0.3.0",
     "bistro.js.tree": "^0.0.2"
   },
+  "devDependencies": {
+    "mocha": "^3.2.0"
+  },
   "directories": {
     "includes": "includes",
     "linens": "linens",
