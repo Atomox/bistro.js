@@ -103,7 +103,12 @@ var myFirstModule = (function (){
 						bar: {
 							baz: 123
 						}
-					}
+					},
+					basic_list: [
+						'abc',
+						'123',
+						'xyz'
+					]
 				});
 			}
 		);

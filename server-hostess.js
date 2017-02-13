@@ -136,6 +136,7 @@ var hostess = (function hostessFactory() {
 
 					console.log('Seated path Callback found. Executing...');
 
+					// Prepare any args declared in the path item, and prepare to pass them to the path callback.
 					if (menu_path_info.arguments) {
 						args = prepare_args(menu_path_info.arguments, {
 							response: response,
@@ -153,34 +154,27 @@ var hostess = (function hostessFactory() {
 			
 					// If we have an associated template, fetch it.
 					if (menu_path_info.template) {
-						var template_response = getTemplate(menu_path_info.template);
-						var template_data = template_response
-							.then(function(data) { 
-								console.log('Template loaded...');
-								return data.toString();
-							})
-							.catch(function(err) {
-								console.log('Error fetching template: ' . err);
-							});
-						calls = calls.concat([template_response, template_data]);
+						var template_data = getTemplate(menu_path_info.template);
+						calls.push(template_data);
 					}
 
 					// Execute the callback with our processed args.
 					var internal_response = menu_path_info.callback.apply (null, args);
 
+					// Attach our template loader function to the Prepcook vars.
+					internal_response.then(function configPrepcook(modResp) {
+						prepcook.config(modResp, '#template', getTemplate);
+					});
+
 					// Prep module response for templating.
 					if (menu_path_info.template) {
 						var module_response = internal_response
 							.then(function captureModuleTemplateResponse (modResp) {
-								/**
-								   @TODO
-								     Process response.
-								 */
 								return modResp;
 							})
 							.catch(function(err) {
 								console.warn('Error retrieving data from path callback promise.', err);
-							}); 
+							});
 
 
 						// Process the template.
@@ -282,7 +276,18 @@ var hostess = (function hostessFactory() {
 		 */
 
 		// Return the getFile promise, which will be the contents of the template file.
-		return getFile(path);
+		return new Promise(function(resolve, reject) {
+			var template_response = getFile(path);
+			var template_data = template_response
+				.then(function(data) { 
+					console.log('Template loaded...');
+					resolve(data.toString());
+				})
+				.catch(function(err) {
+					console.log('Error fetching template: ' + err);
+					reject(err);
+				});
+		});
 /**
 		return new Promise(function (resolve, reject){
 
