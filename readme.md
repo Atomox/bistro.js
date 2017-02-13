@@ -4,6 +4,8 @@
 **A simple CMS/Framework built in Node.js. 
 Developed along side [prepCook.js](https://github.com/Atomox/prepcook.js).**
 
+[![Build Status](https://travis-ci.org/Atomox/bistro.js.svg?branch=master)](https://travis-ci.org/Atomox/bistro.js)
+
 
 ## Module-based development
 
