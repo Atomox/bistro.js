@@ -1,0 +1,30 @@
+body {
+	margin: 0;
+}
+header {
+	border-bottom: 2px dotted #999;
+	background-color: #DF5A7F;
+}
+
+header h1{
+	color: #FFF;
+}
+header .subtitle{
+	
+}
+
+h1,h2,h3,h4,h5,h6 {
+	color: #80B076;
+}
+
+content {
+	padding: 0em 2em;
+
+}
+
+footer {
+	padding-top: 2em;
+	background-color: #5F484C;
+	min-height: 12em;
+	color: #FE9CB7;
+}

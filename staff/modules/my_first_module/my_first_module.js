@@ -23,6 +23,13 @@ var myFirstModule = (function (){
 			template: 'staff/modules/my_first_module/my_second_module.tpl',
 		},
 		{
+			path: 'simple',
+			title: 'My Simple Template',
+			access: 'access content',
+			callback: general_content_callback,
+			template: 'staff/modules/my_first_module/my_simple_template.tpl',
+		},
+		{
 			path: 'content/*',
 			id: 1,
 			title: 'General Content',

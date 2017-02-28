@@ -9,6 +9,7 @@ var sutil = require('./includes/server-utils'),
  */
 	payroll = payroll || require('./server-payroll'),
 	paths = paths || require('./includes/server-paths.js'),
+	theme = theme || require('./staff/themes/my_first_theme/my_first_theme'),
     prepcook = prepcook || require('prepcook.js');
 
 
@@ -124,6 +125,10 @@ var hostess = (function hostessFactory() {
 				menu_path_info = menu_item.data;
 				var args = [];
 
+				if (!menu_path_info.theme) {
+					menu_path_info.theme = true;
+				}
+
 				console.log('Seating a virtual path: ');
 				console.log(' - - - - - - - - - ');
 				console.log(menu_path_info);
@@ -158,13 +163,72 @@ var hostess = (function hostessFactory() {
 						calls.push(template_data);
 					}
 
+
+					var theme_template = new Promise(function(resolve, reject) {
+						if (menu_path_info.theme && theme.theme) {
+							theme_path_info = theme.theme.master;
+							var theme_template_data = getTemplate(theme_path_info.template);
+							var theme_template_vars = theme_path_info.callback();
+
+
+
+							/**
+							   
+
+
+
+
+							   @TODO
+
+							     IN PROGRESS
+
+
+
+
+
+							 */
+
+							var theme_template_includes = false;
+							if (typeof theme_path_info.includes !== 'undefined') {
+								theme_template_includes = Promise.resolve(theme_path_info.includes);
+							}
+							else {
+								theme_template_includes = Promise.resolve();
+							}
+							
+							Promise.all([theme_template_data, theme_template_vars, theme_template_includes])
+								.then(function(theme_data) {
+
+									console.log(' >>> A <<<');
+									resolve({
+										tpl: theme_data[0],
+										vars: theme_data[1],
+										includes: theme_data[2]
+									});
+								})
+								.catch(function(err){
+									console.log('Problem fetching theme master template.');
+									reject(err);
+								});
+						}
+						else {
+							resolve(false);
+						}
+					});
+					calls.push(theme_template);
+					
+
 					// Execute the callback with our processed args.
 					var internal_response = menu_path_info.callback.apply (null, args);
 
-					// Attach our template loader function to the Prepcook vars.
-					internal_response.then(function configPrepcook(modResp) {
-						prepcook.config(modResp, '#template', getTemplate);
-					});
+					// Merge or push any promises to the promise array.
+					if (Array.isArray(internal_response)) {
+						calls = calls.concat(internal_response, calls);
+					}
+					else {
+						calls.push(internal_response);
+					}
+
 
 					// Prep module response for templating.
 					if (menu_path_info.template) {
@@ -178,35 +242,88 @@ var hostess = (function hostessFactory() {
 
 
 						// Process the template.
-						var template_complete = Promise.all([module_response,template_data])
-							.then(function (module_data) {
+						var template_complete = new Promise(function(resolve, reject) {
+
+							Promise.all([module_response,template_data, theme_template]).then(function (module_data) {
 								var mod_data = module_data[0];
 								var tpl = module_data[1];
 
+								/**
+								
+
+
+
+								   @TODO
+
+								     Include all sub templates.
+								
+
+
+
+								 */
+								var my_scope,
+									my_template;
+
+								try {
+									if (typeof module_data[2] === 'object') {
+										my_template = module_data[2].tpl;
+										my_scope = module_data[2].vars;
+										my_includes = module_data[2].includes;
+
+										// Bind any includes, like css or js.
+										if (typeof my_includes !== 'undefined') {
+											if (typeof my_includes.css !== 'undefined') {
+												for (css in my_includes.css) {
+													prepcook.bindInclude(my_scope, css, 'css', my_includes.css[css].path);
+												}
+											}
+										}
+
+										// Bind the template and data at the request path as a sub template
+										// of the master theme template.
+										prepcook.bindSubTemplate(my_scope, 'content', tpl, mod_data);
+									}
+									else {
+										my_template = tpl;
+										my_scope = mod_data;
+									}
+
+									// Attach our template loader function to the Prepcook vars.
+									prepcook.config(my_scope, '#template', getTemplateByName);
+								}
+								catch(err) {
+									console.log('Error prepping template: ', err);
+								}
+
+								/**
+
+								   
+								   @END @TODO
+
+
+								 */
+								console.log(' >>>>>>>>>>>>>> ', my_scope);
+
 								// Evaluate the template, and output it.
-								var processed_template = prepcook.processTemplate(mod_data, tpl);								
+								var processed_template = prepcook.processTemplate(my_scope, my_template);
+
 								var output_template = processed_template
 									.then(function (parsed_tpl) {
 										response.write(parsed_tpl);
-										console.log('Final response:', parsed_tpl);
+										resolve(true);
 									})
 									.catch(function (err){
 										console.log('An error occured in ' + e.fileName + ' on line ' + e.lineNumber + ' during template parsing.', err);
+										resolve(false);
 									});
-
-								calls = calls.concat([processed_template, output_template]);
 							});
+						})
+						.catch(function(err) {
+							console.log(err);
+						});
 
-						calls = calls.concat([module_response,template_complete]);
-					}
-
-					// Merge or push any promises to the promise array.
-					if (Array.isArray(internal_response)) {
-						// Push our promise(s) onto the return array.
-						calls = calls.concat(internal_response);
-					}
-					else {
-						calls.push(internal_response);
+						calls.push(module_response);
+						calls.push(template_complete);
 					}
 				}
 			}
@@ -266,17 +383,66 @@ var hostess = (function hostessFactory() {
 
 
 	 */
-	function getTemplate(path, seating_chart) {
-
+	
+	function getTemplateByName(name, as_object) {
 		/**
 		   @todo
 
 		     If we want to check multiple paths for our template,
 		     check each location, using a separate promise.
 		 */
+		var path = '';
+		
+		// Search the current theme for this template name.
+		if (typeof theme.theme === 'object' && theme.theme !== null) {
+			for(t in theme.theme) {
+				if (t == name && theme.theme[t].template) {
+					path = theme.theme[t].template;
+				}
+			}
+		}
+
+		// If not found, check all enabled modules for this template.
+		if (path == '') {
+			for (t in payroll.module_roster) {
+				var my_module = sutil.module_require(payroll.module_roster[t]);
+
+				if (my_module && my_module.theme) {
+					for (u in my_module.theme) {
+						if (u == name && my_module.theme[u].template) {
+							path = my_module.theme[u].template;
+						}
+					}
+				}
+			}
+		}
+
+		if (as_object === true) {
+			return new Promise(function(resolve, reject) {
+				getTemplate(path).then(function(tpl) {
+					resolve({
+						template: tpl,
+					});
+				})
+				.catch(function(err) {
+					reject(err);
+				});
+			});
+		}
+
+		return getTemplate(path);
+	}
+
+	function getTemplate(path) {
+
 
 		// Return the getFile promise, which will be the contents of the template file.
 		return new Promise(function(resolve, reject) {
+
+			if (path.length <= 0) {
+				reject('Could not find template with name ' + name);
+			}
+
 			var template_response = getFile(path);
 			var template_data = template_response
 				.then(function(data) { 
