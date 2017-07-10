@@ -115,17 +115,40 @@ var hostess = (function hostessFactory() {
 				var virtual_path = resolveVirtualPath(path);
 
 				if (virtual_path === false) {
-					throw new Error('Virtual path could not be resolved.');
+					// Serve 404.
+					virtual_path = theme.theme[404];
+					menu_path_info = {
+						theme: false,
+						arguments: null,
+						callback: false,
+
+							/**
+							 
+								@TODO
+
+								  We need to pass includes to be available when we bind the scope to the template,
+								  so includes work for themeplates without a theme wrapper around them.
+
+
+							 */
+
+
+
+						template: virtual_path.template,
+						includes: virtual_path.includes
+					}
+				}
+				else {
+					// If we have found a virtual path match,
+					// set it as our menu item.
+					menu_item = virtual_path.match;
+					menu_item_depth = virtual_path.length;
+					menu_path_info = menu_item.data;
 				}
 
-				// If we have found a virtual path match,
-				// set it as our menu item.
-				menu_item = virtual_path.match;
-				menu_item_depth = virtual_path.length;
-				menu_path_info = menu_item.data;
 				var args = [];
 
-				if (!menu_path_info.theme) {
+				if (typeof menu_path_info.theme === 'undefined') {
 					menu_path_info.theme = true;
 				}
 
@@ -137,7 +160,7 @@ var hostess = (function hostessFactory() {
 
 				// If menu item has a callback, check for args. Then call the callback, passing args if available.
 				// check for placeholder args, like GLOBAL_RESPONSE, which should but supplimented with the response object.
-				if (menu_path_info.callback) {
+				if (menu_path_info.callback || menu_path_info.template) {
 
 					console.log('Seated path Callback found. Executing...');
 
@@ -168,25 +191,9 @@ var hostess = (function hostessFactory() {
 						if (menu_path_info.theme && theme.theme) {
 							theme_path_info = theme.theme.master;
 							var theme_template_data = getTemplate(theme_path_info.template);
-							var theme_template_vars = theme_path_info.callback();
-
-
-
-							/**
-							   
-
-
-
-
-							   @TODO
-
-							     IN PROGRESS
-
-
-
-
-
-							 */
+							var theme_template_vars = (typeof theme_path_info.callback === 'function') 
+								? theme_path_info.callback()
+								: Promise.resolve({});
 
 							var theme_template_includes = false;
 							if (typeof theme_path_info.includes !== 'undefined') {
@@ -219,7 +226,9 @@ var hostess = (function hostessFactory() {
 					
 
 					// Execute the callback with our processed args.
-					var internal_response = menu_path_info.callback.apply (null, args);
+					var internal_response = (typeof menu_path_info.callback === 'function') 
+						? menu_path_info.callback.apply (null, args)
+						: Promise.resolve({});
 
 					// Merge or push any promises to the promise array.
 					if (Array.isArray(internal_response)) {
@@ -232,40 +241,30 @@ var hostess = (function hostessFactory() {
 
 					// Prep module response for templating.
 					if (menu_path_info.template) {
-						var module_response = internal_response
-							.then(function captureModuleTemplateResponse (modResp) {
-								return modResp;
+						var module_response = new Promise(function(resolve, reject) {
+							internal_response.then(function captureModuleTemplateResponse (modResp) {
+								resolve(modResp);
 							})
 							.catch(function(err) {
 								console.warn('Error retrieving data from path callback promise.', err);
+								reject(err);
 							});
+						});
 
 
 						// Process the template.
 						var template_complete = new Promise(function(resolve, reject) {
 
-							Promise.all([module_response,template_data, theme_template]).then(function (module_data) {
+							Promise.all([module_response, template_data, theme_template]).then(function (module_data) {
 								var mod_data = module_data[0];
 								var tpl = module_data[1];
 
-								/**
-								
-
-
-
-								   @TODO
-
-								     Include all sub templates.
-								
-
-
-
-								 */
 								var my_scope,
 									my_template;
 
 								try {
 									if (typeof module_data[2] === 'object') {
+										console.log('Theme detected... Wrapping template...');
 										my_template = module_data[2].tpl;
 										my_scope = module_data[2].vars;
 										my_includes = module_data[2].includes;
@@ -274,22 +273,37 @@ var hostess = (function hostessFactory() {
 										if (typeof my_includes !== 'undefined') {
 											if (typeof my_includes.css !== 'undefined') {
 												for (css in my_includes.css) {
-													prepcook.bindInclude(my_scope, css, 'css', my_includes.css[css].path);
+													my_scope = prepcook.bindInclude(my_scope, css, 'css', my_includes.css[css].path);
 												}
 											}
 										}
 
 										// Bind the template and data at the request path as a sub template
 										// of the master theme template.
-										prepcook.bindSubTemplate(my_scope, 'content', tpl, mod_data);
+										my_scope = prepcook.bindSubTemplate(my_scope, 'content', tpl, mod_data);
 									}
 									else {
+
+
+
+										
+										/**
+										    
+
+										    @TODO
+
+												We need to bind #includes for templates without a theme wrapper.
+												
+										 */
+
+
+										console.log('No theme... Serving template solo...');
 										my_template = tpl;
 										my_scope = mod_data;
 									}
 
 									// Attach our template loader function to the Prepcook vars.
-									prepcook.config(my_scope, '#template', getTemplateByName);
+									my_scope = prepcook.config(my_scope, '#template', getTemplateByName);
 								}
 								catch(err) {
 									console.log('Error prepping template: ', err);
@@ -313,7 +327,7 @@ var hostess = (function hostessFactory() {
 										resolve(true);
 									})
 									.catch(function (err){
-										console.log('An error occured in ' + e.fileName + ' on line ' + e.lineNumber + ' during template parsing.', err);
+										console.error('An error occured in ' + e.fileName + ' on line ' + e.lineNumber + ' during template parsing.', err);
 										resolve(false);
 									});
 							});

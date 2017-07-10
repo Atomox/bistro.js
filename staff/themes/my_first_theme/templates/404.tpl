@@ -3,21 +3,13 @@
 	<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/flexboxgrid/6.3.1/flexboxgrid.min.css" type="text/css" >
 	{{ #include css:my_first_theme /include }}
 </HEAD>
-<BODY>
+<BODY class="four-o-four">
 
 	<div class="row">
-	    <div class="col-xs-12">
+	    <div class="col-xs-offset-3 col-xs-9">
 
-	    	<header>
-				{{ #template header /template }}
-			</header>
-			<div id="content">
-				{{ #template content /template }}
-			</div>
-			<footer>
-				{{ #template footer /template }}
-			</footer>
-
+	    	<h1>404</h1>
+	    	Dave's not here, man.
 	    </div>
 	</div>
 

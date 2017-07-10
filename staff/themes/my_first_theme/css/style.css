@@ -2,23 +2,32 @@ body {
 	margin: 0;
 }
 header {
-	border-bottom: 2px dotted #999;
 	background-color: #DF5A7F;
 }
 
-header h1{
+header h1 {
+	color: #FFF;
+	padding: 0.24rem;
+	margin: 0rem;
+}
+header h1 a {
+	text-decoration: none;
 	color: #FFF;
 }
-header .subtitle{
-	
+header ul {
+	padding: 0rem;
+}
+header li {
+	display: inline-block;
+	margin-right: 1rem;
 }
 
 h1,h2,h3,h4,h5,h6 {
 	color: #80B076;
 }
 
-content {
-	padding: 0em 2em;
+header, footer, #content {
+	padding: 0.4em 2em;
 
 }
 
@@ -27,4 +36,8 @@ footer {
 	background-color: #5F484C;
 	min-height: 12em;
 	color: #FE9CB7;
+}
+
+.four-o-four h1{
+	font-size: 6rem;
 }

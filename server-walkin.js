@@ -58,8 +58,6 @@ var db = (function dbConn() {
 					// freezer.end();
 					reject(err); 
 				}
-				console.log('We made it!  |  ');
-				console.log(fields);
 				// freezer.end();
 				resolve(rows, fields);
 			});

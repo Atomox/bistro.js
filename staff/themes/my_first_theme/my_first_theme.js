@@ -16,7 +16,18 @@ var myFirstModule = (function (){
 			includes: {
 				css: {
 					'my_first_theme': {
-						path: 'staff/themes/my_first_theme/css/style.css'
+						path: '/staff/themes/my_first_theme/css/style.css'
+					}
+				}
+			}
+		},
+		404: {
+			type: '404',
+			template: 'staff/themes/my_first_theme/templates/404.tpl',
+			includes: {
+				css: {
+					'my_first_theme': {
+						path: '/staff/themes/my_first_theme/css/style.css'
 					}
 				}
 			}
@@ -24,6 +35,14 @@ var myFirstModule = (function (){
 		header: {
 			type: 'header',
 			template: 'staff/themes/my_first_theme/templates/header.tpl'
+		},
+		footer: {
+			type: 'footer',
+			template: 'staff/themes/my_first_theme/templates/footer.tpl'
+		},
+		header__menu: {
+			type: 'header',
+			template: 'staff/themes/my_first_theme/templates/header--menu.tpl'
 		}
 	};
 
@@ -54,8 +73,8 @@ var myFirstModule = (function (){
 						]
 					},
 					footer: {
-						copyright: '(c) 2017',
-						legal: 'some fine print'
+						copyright: '&#169; 2017, Ben Helmer.',
+						legal: 'built with Bistro.js and Prepcook.js'
 					}
 				});
 			}

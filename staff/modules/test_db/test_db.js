@@ -15,10 +15,22 @@ var myDbTestModule = (function (){
 			title: 'Database Test Sandbox',
 			access: 'access content',
 			callback: test_database_content_callback, 
-			template: 'staff/modules/test_db/walkin_test.tpl',
+			template: 'staff/modules/test_db/templates/walkin_test.tpl',
 			type: 'normal'
 		},
-	];
+		{
+			path: 'walkin/test/people',
+			title: 'Here\'s Some People',
+			template: 'staff/modules/test_db/templates/walkin_people.tpl',
+			callback: test_database_people_callback,
+		},
+	],
+	theme = {
+		people__person: {
+			type: 'sub',
+			template: 'staff/modules/test_db/templates/people__person.tpl'
+		}
+	};
 
 
 	function test_database_callback() {
@@ -59,11 +71,33 @@ var myDbTestModule = (function (){
 		return handleResults;
 	}
 
+	function test_database_people_callback() {
+
+		return new Promise(function(resolve, reject) {
+			
+			// Query the database.
+			var query = walkin.select('SELECT * FROM people p');
+
+			// Process the results.
+			query.then(function acceptDbResult(rows, fields) {
+
+				var results = {
+					title: 'Test the DB',
+					people: rows
+				}
+
+				resolve(results);
+			});
+		});
+	}
+
 	return {
-		paths: paths
+		paths: paths,
+		theme: theme
 	};
 })();
 
 module.exports = {
-	paths: myDbTestModule.paths
+	paths: myDbTestModule.paths,
+	theme: myDbTestModule.theme
 };
